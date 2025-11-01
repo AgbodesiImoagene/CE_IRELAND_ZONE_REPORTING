@@ -1,0 +1,433 @@
+role_name,permission,default_granted
+Cell Leader,cells.manage,FALSE
+Cell Leader,cells.reports.approve,FALSE
+Cell Leader,cells.reports.create,TRUE
+Cell Leader,cells.reports.delete,FALSE
+Cell Leader,cells.reports.export,FALSE
+Cell Leader,cells.reports.read,TRUE
+Cell Leader,cells.reports.update,TRUE
+Cell Leader,finance.batches.create,FALSE
+Cell Leader,finance.batches.delete,FALSE
+Cell Leader,finance.batches.lock,FALSE
+Cell Leader,finance.batches.read,FALSE
+Cell Leader,finance.batches.unlock,FALSE
+Cell Leader,finance.batches.update,FALSE
+Cell Leader,finance.entries.create,FALSE
+Cell Leader,finance.entries.delete,FALSE
+Cell Leader,finance.entries.export,FALSE
+Cell Leader,finance.entries.read,FALSE
+Cell Leader,finance.entries.update,FALSE
+Cell Leader,finance.lookups.manage,FALSE
+Cell Leader,finance.verify,FALSE
+Cell Leader,registry.admin_notes.create,FALSE
+Cell Leader,registry.admin_notes.delete,FALSE
+Cell Leader,registry.admin_notes.read,FALSE
+Cell Leader,registry.admin_notes.update,FALSE
+Cell Leader,registry.attendance.create,FALSE
+Cell Leader,registry.attendance.delete,FALSE
+Cell Leader,registry.attendance.export,FALSE
+Cell Leader,registry.attendance.read,FALSE
+Cell Leader,registry.attendance.update,FALSE
+Cell Leader,registry.cells.assign,FALSE
+Cell Leader,registry.departments.create,FALSE
+Cell Leader,registry.departments.delete,FALSE
+Cell Leader,registry.departments.read,FALSE
+Cell Leader,registry.departments.update,FALSE
+Cell Leader,registry.firsttimers.create,FALSE
+Cell Leader,registry.firsttimers.delete,FALSE
+Cell Leader,registry.firsttimers.export,FALSE
+Cell Leader,registry.firsttimers.read,FALSE
+Cell Leader,registry.firsttimers.update,FALSE
+Cell Leader,registry.people.create,FALSE
+Cell Leader,registry.people.delete,FALSE
+Cell Leader,registry.people.export,FALSE
+Cell Leader,registry.people.merge,FALSE
+Cell Leader,registry.people.read,FALSE
+Cell Leader,registry.people.update,FALSE
+Cell Leader,reports.export,FALSE
+Cell Leader,reports.schedule,FALSE
+Cell Leader,reports.view,FALSE
+Cell Leader,system.audit.view,FALSE
+Cell Leader,system.exports.full_pii,FALSE
+Cell Leader,system.roles.assign,FALSE
+Cell Leader,system.scopes.assign,FALSE
+Cell Leader,system.settings.manage,FALSE
+Cell Leader,system.users.create,FALSE
+Church Pastor / Coordinator,cells.manage,TRUE
+Church Pastor / Coordinator,cells.reports.approve,FALSE
+Church Pastor / Coordinator,cells.reports.create,FALSE
+Church Pastor / Coordinator,cells.reports.delete,FALSE
+Church Pastor / Coordinator,cells.reports.export,FALSE
+Church Pastor / Coordinator,cells.reports.read,FALSE
+Church Pastor / Coordinator,cells.reports.update,FALSE
+Church Pastor / Coordinator,finance.batches.create,FALSE
+Church Pastor / Coordinator,finance.batches.delete,FALSE
+Church Pastor / Coordinator,finance.batches.lock,FALSE
+Church Pastor / Coordinator,finance.batches.read,FALSE
+Church Pastor / Coordinator,finance.batches.unlock,FALSE
+Church Pastor / Coordinator,finance.batches.update,FALSE
+Church Pastor / Coordinator,finance.entries.create,FALSE
+Church Pastor / Coordinator,finance.entries.delete,FALSE
+Church Pastor / Coordinator,finance.entries.export,FALSE
+Church Pastor / Coordinator,finance.entries.read,TRUE
+Church Pastor / Coordinator,finance.entries.update,FALSE
+Church Pastor / Coordinator,finance.lookups.manage,FALSE
+Church Pastor / Coordinator,finance.verify,TRUE
+Church Pastor / Coordinator,registry.admin_notes.create,FALSE
+Church Pastor / Coordinator,registry.admin_notes.delete,FALSE
+Church Pastor / Coordinator,registry.admin_notes.read,FALSE
+Church Pastor / Coordinator,registry.admin_notes.update,FALSE
+Church Pastor / Coordinator,registry.attendance.create,TRUE
+Church Pastor / Coordinator,registry.attendance.delete,FALSE
+Church Pastor / Coordinator,registry.attendance.export,FALSE
+Church Pastor / Coordinator,registry.attendance.read,TRUE
+Church Pastor / Coordinator,registry.attendance.update,TRUE
+Church Pastor / Coordinator,registry.cells.assign,FALSE
+Church Pastor / Coordinator,registry.departments.create,TRUE
+Church Pastor / Coordinator,registry.departments.delete,FALSE
+Church Pastor / Coordinator,registry.departments.read,TRUE
+Church Pastor / Coordinator,registry.departments.update,TRUE
+Church Pastor / Coordinator,registry.firsttimers.create,TRUE
+Church Pastor / Coordinator,registry.firsttimers.delete,FALSE
+Church Pastor / Coordinator,registry.firsttimers.export,FALSE
+Church Pastor / Coordinator,registry.firsttimers.read,TRUE
+Church Pastor / Coordinator,registry.firsttimers.update,TRUE
+Church Pastor / Coordinator,registry.people.create,TRUE
+Church Pastor / Coordinator,registry.people.delete,FALSE
+Church Pastor / Coordinator,registry.people.export,FALSE
+Church Pastor / Coordinator,registry.people.merge,FALSE
+Church Pastor / Coordinator,registry.people.read,TRUE
+Church Pastor / Coordinator,registry.people.update,TRUE
+Church Pastor / Coordinator,reports.export,TRUE
+Church Pastor / Coordinator,reports.schedule,FALSE
+Church Pastor / Coordinator,reports.view,TRUE
+Church Pastor / Coordinator,system.audit.view,FALSE
+Church Pastor / Coordinator,system.exports.full_pii,FALSE
+Church Pastor / Coordinator,system.roles.assign,TRUE
+Church Pastor / Coordinator,system.scopes.assign,FALSE
+Church Pastor / Coordinator,system.settings.manage,FALSE
+Church Pastor / Coordinator,system.users.create,TRUE
+Finance Officer,cells.manage,FALSE
+Finance Officer,cells.reports.approve,FALSE
+Finance Officer,cells.reports.create,FALSE
+Finance Officer,cells.reports.delete,FALSE
+Finance Officer,cells.reports.export,FALSE
+Finance Officer,cells.reports.read,FALSE
+Finance Officer,cells.reports.update,FALSE
+Finance Officer,finance.batches.create,TRUE
+Finance Officer,finance.batches.delete,TRUE
+Finance Officer,finance.batches.lock,TRUE
+Finance Officer,finance.batches.read,TRUE
+Finance Officer,finance.batches.unlock,FALSE
+Finance Officer,finance.batches.update,TRUE
+Finance Officer,finance.entries.create,TRUE
+Finance Officer,finance.entries.delete,TRUE
+Finance Officer,finance.entries.export,TRUE
+Finance Officer,finance.entries.read,TRUE
+Finance Officer,finance.entries.update,TRUE
+Finance Officer,finance.lookups.manage,FALSE
+Finance Officer,finance.verify,TRUE
+Finance Officer,registry.admin_notes.create,FALSE
+Finance Officer,registry.admin_notes.delete,FALSE
+Finance Officer,registry.admin_notes.read,FALSE
+Finance Officer,registry.admin_notes.update,FALSE
+Finance Officer,registry.attendance.create,FALSE
+Finance Officer,registry.attendance.delete,FALSE
+Finance Officer,registry.attendance.export,FALSE
+Finance Officer,registry.attendance.read,FALSE
+Finance Officer,registry.attendance.update,FALSE
+Finance Officer,registry.cells.assign,FALSE
+Finance Officer,registry.departments.create,FALSE
+Finance Officer,registry.departments.delete,FALSE
+Finance Officer,registry.departments.read,FALSE
+Finance Officer,registry.departments.update,FALSE
+Finance Officer,registry.firsttimers.create,FALSE
+Finance Officer,registry.firsttimers.delete,FALSE
+Finance Officer,registry.firsttimers.export,FALSE
+Finance Officer,registry.firsttimers.read,FALSE
+Finance Officer,registry.firsttimers.update,FALSE
+Finance Officer,registry.people.create,FALSE
+Finance Officer,registry.people.delete,FALSE
+Finance Officer,registry.people.export,FALSE
+Finance Officer,registry.people.merge,FALSE
+Finance Officer,registry.people.read,FALSE
+Finance Officer,registry.people.update,FALSE
+Finance Officer,reports.export,FALSE
+Finance Officer,reports.schedule,FALSE
+Finance Officer,reports.view,TRUE
+Finance Officer,system.audit.view,FALSE
+Finance Officer,system.exports.full_pii,FALSE
+Finance Officer,system.roles.assign,FALSE
+Finance Officer,system.scopes.assign,FALSE
+Finance Officer,system.settings.manage,FALSE
+Finance Officer,system.users.create,FALSE
+Group Pastor,cells.manage,FALSE
+Group Pastor,cells.reports.approve,FALSE
+Group Pastor,cells.reports.create,FALSE
+Group Pastor,cells.reports.delete,FALSE
+Group Pastor,cells.reports.export,FALSE
+Group Pastor,cells.reports.read,TRUE
+Group Pastor,cells.reports.update,FALSE
+Group Pastor,finance.batches.create,FALSE
+Group Pastor,finance.batches.delete,FALSE
+Group Pastor,finance.batches.lock,FALSE
+Group Pastor,finance.batches.read,TRUE
+Group Pastor,finance.batches.unlock,FALSE
+Group Pastor,finance.batches.update,FALSE
+Group Pastor,finance.entries.create,FALSE
+Group Pastor,finance.entries.delete,FALSE
+Group Pastor,finance.entries.export,FALSE
+Group Pastor,finance.entries.read,TRUE
+Group Pastor,finance.entries.update,FALSE
+Group Pastor,finance.lookups.manage,FALSE
+Group Pastor,finance.verify,FALSE
+Group Pastor,registry.admin_notes.create,FALSE
+Group Pastor,registry.admin_notes.delete,FALSE
+Group Pastor,registry.admin_notes.read,FALSE
+Group Pastor,registry.admin_notes.update,FALSE
+Group Pastor,registry.attendance.create,FALSE
+Group Pastor,registry.attendance.delete,FALSE
+Group Pastor,registry.attendance.export,FALSE
+Group Pastor,registry.attendance.read,TRUE
+Group Pastor,registry.attendance.update,FALSE
+Group Pastor,registry.cells.assign,FALSE
+Group Pastor,registry.departments.create,FALSE
+Group Pastor,registry.departments.delete,FALSE
+Group Pastor,registry.departments.read,TRUE
+Group Pastor,registry.departments.update,FALSE
+Group Pastor,registry.firsttimers.create,FALSE
+Group Pastor,registry.firsttimers.delete,FALSE
+Group Pastor,registry.firsttimers.export,FALSE
+Group Pastor,registry.firsttimers.read,TRUE
+Group Pastor,registry.firsttimers.update,FALSE
+Group Pastor,registry.people.create,FALSE
+Group Pastor,registry.people.delete,FALSE
+Group Pastor,registry.people.export,FALSE
+Group Pastor,registry.people.merge,FALSE
+Group Pastor,registry.people.read,TRUE
+Group Pastor,registry.people.update,FALSE
+Group Pastor,reports.export,TRUE
+Group Pastor,reports.schedule,FALSE
+Group Pastor,reports.view,TRUE
+Group Pastor,system.audit.view,FALSE
+Group Pastor,system.exports.full_pii,FALSE
+Group Pastor,system.roles.assign,TRUE
+Group Pastor,system.scopes.assign,TRUE
+Group Pastor,system.settings.manage,FALSE
+Group Pastor,system.users.create,TRUE
+Church Administrator,cells.manage,FALSE
+Church Administrator,cells.reports.approve,FALSE
+Church Administrator,cells.reports.create,FALSE
+Church Administrator,cells.reports.delete,FALSE
+Church Administrator,cells.reports.export,FALSE
+Church Administrator,cells.reports.read,FALSE
+Church Administrator,cells.reports.update,FALSE
+Church Administrator,finance.batches.create,FALSE
+Church Administrator,finance.batches.delete,FALSE
+Church Administrator,finance.batches.lock,FALSE
+Church Administrator,finance.batches.read,FALSE
+Church Administrator,finance.batches.unlock,FALSE
+Church Administrator,finance.batches.update,FALSE
+Church Administrator,finance.entries.create,FALSE
+Church Administrator,finance.entries.delete,FALSE
+Church Administrator,finance.entries.export,FALSE
+Church Administrator,finance.entries.read,FALSE
+Church Administrator,finance.entries.update,FALSE
+Church Administrator,finance.lookups.manage,FALSE
+Church Administrator,finance.verify,FALSE
+Church Administrator,registry.admin_notes.create,FALSE
+Church Administrator,registry.admin_notes.delete,FALSE
+Church Administrator,registry.admin_notes.read,FALSE
+Church Administrator,registry.admin_notes.update,FALSE
+Church Administrator,registry.attendance.create,TRUE
+Church Administrator,registry.attendance.delete,FALSE
+Church Administrator,registry.attendance.export,FALSE
+Church Administrator,registry.attendance.read,TRUE
+Church Administrator,registry.attendance.update,TRUE
+Church Administrator,registry.cells.assign,FALSE
+Church Administrator,registry.departments.create,TRUE
+Church Administrator,registry.departments.delete,FALSE
+Church Administrator,registry.departments.read,TRUE
+Church Administrator,registry.departments.update,TRUE
+Church Administrator,registry.firsttimers.create,TRUE
+Church Administrator,registry.firsttimers.delete,FALSE
+Church Administrator,registry.firsttimers.export,FALSE
+Church Administrator,registry.firsttimers.read,TRUE
+Church Administrator,registry.firsttimers.update,TRUE
+Church Administrator,registry.people.create,TRUE
+Church Administrator,registry.people.delete,FALSE
+Church Administrator,registry.people.export,FALSE
+Church Administrator,registry.people.merge,FALSE
+Church Administrator,registry.people.read,TRUE
+Church Administrator,registry.people.update,TRUE
+Church Administrator,reports.export,FALSE
+Church Administrator,reports.schedule,FALSE
+Church Administrator,reports.view,FALSE
+Church Administrator,system.audit.view,FALSE
+Church Administrator,system.exports.full_pii,FALSE
+Church Administrator,system.roles.assign,FALSE
+Church Administrator,system.scopes.assign,FALSE
+Church Administrator,system.settings.manage,FALSE
+Church Administrator,system.users.create,FALSE
+Reports Viewer (Pastoral),cells.manage,FALSE
+Reports Viewer (Pastoral),cells.reports.approve,FALSE
+Reports Viewer (Pastoral),cells.reports.create,FALSE
+Reports Viewer (Pastoral),cells.reports.delete,FALSE
+Reports Viewer (Pastoral),cells.reports.export,FALSE
+Reports Viewer (Pastoral),cells.reports.read,FALSE
+Reports Viewer (Pastoral),cells.reports.update,FALSE
+Reports Viewer (Pastoral),finance.batches.create,FALSE
+Reports Viewer (Pastoral),finance.batches.delete,FALSE
+Reports Viewer (Pastoral),finance.batches.lock,FALSE
+Reports Viewer (Pastoral),finance.batches.read,FALSE
+Reports Viewer (Pastoral),finance.batches.unlock,FALSE
+Reports Viewer (Pastoral),finance.batches.update,FALSE
+Reports Viewer (Pastoral),finance.entries.create,FALSE
+Reports Viewer (Pastoral),finance.entries.delete,FALSE
+Reports Viewer (Pastoral),finance.entries.export,FALSE
+Reports Viewer (Pastoral),finance.entries.read,FALSE
+Reports Viewer (Pastoral),finance.entries.update,FALSE
+Reports Viewer (Pastoral),finance.lookups.manage,FALSE
+Reports Viewer (Pastoral),finance.verify,FALSE
+Reports Viewer (Pastoral),registry.admin_notes.create,FALSE
+Reports Viewer (Pastoral),registry.admin_notes.delete,FALSE
+Reports Viewer (Pastoral),registry.admin_notes.read,FALSE
+Reports Viewer (Pastoral),registry.admin_notes.update,FALSE
+Reports Viewer (Pastoral),registry.attendance.create,FALSE
+Reports Viewer (Pastoral),registry.attendance.delete,FALSE
+Reports Viewer (Pastoral),registry.attendance.export,FALSE
+Reports Viewer (Pastoral),registry.attendance.read,FALSE
+Reports Viewer (Pastoral),registry.attendance.update,FALSE
+Reports Viewer (Pastoral),registry.cells.assign,FALSE
+Reports Viewer (Pastoral),registry.departments.create,FALSE
+Reports Viewer (Pastoral),registry.departments.delete,FALSE
+Reports Viewer (Pastoral),registry.departments.read,FALSE
+Reports Viewer (Pastoral),registry.departments.update,FALSE
+Reports Viewer (Pastoral),registry.firsttimers.create,FALSE
+Reports Viewer (Pastoral),registry.firsttimers.delete,FALSE
+Reports Viewer (Pastoral),registry.firsttimers.export,FALSE
+Reports Viewer (Pastoral),registry.firsttimers.read,FALSE
+Reports Viewer (Pastoral),registry.firsttimers.update,FALSE
+Reports Viewer (Pastoral),registry.people.create,FALSE
+Reports Viewer (Pastoral),registry.people.delete,FALSE
+Reports Viewer (Pastoral),registry.people.export,FALSE
+Reports Viewer (Pastoral),registry.people.merge,FALSE
+Reports Viewer (Pastoral),registry.people.read,FALSE
+Reports Viewer (Pastoral),registry.people.update,FALSE
+Reports Viewer (Pastoral),reports.export,TRUE
+Reports Viewer (Pastoral),reports.schedule,FALSE
+Reports Viewer (Pastoral),reports.view,TRUE
+Reports Viewer (Pastoral),system.audit.view,FALSE
+Reports Viewer (Pastoral),system.exports.full_pii,FALSE
+Reports Viewer (Pastoral),system.roles.assign,FALSE
+Reports Viewer (Pastoral),system.scopes.assign,FALSE
+Reports Viewer (Pastoral),system.settings.manage,FALSE
+Reports Viewer (Pastoral),system.users.create,FALSE
+Technical Lead (Optional),cells.manage,FALSE
+Technical Lead (Optional),cells.reports.approve,FALSE
+Technical Lead (Optional),cells.reports.create,FALSE
+Technical Lead (Optional),cells.reports.delete,FALSE
+Technical Lead (Optional),cells.reports.export,FALSE
+Technical Lead (Optional),cells.reports.read,FALSE
+Technical Lead (Optional),cells.reports.update,FALSE
+Technical Lead (Optional),finance.batches.create,FALSE
+Technical Lead (Optional),finance.batches.delete,FALSE
+Technical Lead (Optional),finance.batches.lock,FALSE
+Technical Lead (Optional),finance.batches.read,FALSE
+Technical Lead (Optional),finance.batches.unlock,FALSE
+Technical Lead (Optional),finance.batches.update,FALSE
+Technical Lead (Optional),finance.entries.create,FALSE
+Technical Lead (Optional),finance.entries.delete,FALSE
+Technical Lead (Optional),finance.entries.export,FALSE
+Technical Lead (Optional),finance.entries.read,FALSE
+Technical Lead (Optional),finance.entries.update,FALSE
+Technical Lead (Optional),finance.lookups.manage,TRUE
+Technical Lead (Optional),finance.verify,FALSE
+Technical Lead (Optional),registry.admin_notes.create,FALSE
+Technical Lead (Optional),registry.admin_notes.delete,FALSE
+Technical Lead (Optional),registry.admin_notes.read,FALSE
+Technical Lead (Optional),registry.admin_notes.update,FALSE
+Technical Lead (Optional),registry.attendance.create,FALSE
+Technical Lead (Optional),registry.attendance.delete,FALSE
+Technical Lead (Optional),registry.attendance.export,FALSE
+Technical Lead (Optional),registry.attendance.read,FALSE
+Technical Lead (Optional),registry.attendance.update,FALSE
+Technical Lead (Optional),registry.cells.assign,FALSE
+Technical Lead (Optional),registry.departments.create,FALSE
+Technical Lead (Optional),registry.departments.delete,FALSE
+Technical Lead (Optional),registry.departments.read,FALSE
+Technical Lead (Optional),registry.departments.update,FALSE
+Technical Lead (Optional),registry.firsttimers.create,FALSE
+Technical Lead (Optional),registry.firsttimers.delete,FALSE
+Technical Lead (Optional),registry.firsttimers.export,FALSE
+Technical Lead (Optional),registry.firsttimers.read,FALSE
+Technical Lead (Optional),registry.firsttimers.update,FALSE
+Technical Lead (Optional),registry.people.create,FALSE
+Technical Lead (Optional),registry.people.delete,FALSE
+Technical Lead (Optional),registry.people.export,FALSE
+Technical Lead (Optional),registry.people.merge,FALSE
+Technical Lead (Optional),registry.people.read,FALSE
+Technical Lead (Optional),registry.people.update,FALSE
+Technical Lead (Optional),reports.export,FALSE
+Technical Lead (Optional),reports.schedule,FALSE
+Technical Lead (Optional),reports.view,TRUE
+Technical Lead (Optional),system.audit.view,FALSE
+Technical Lead (Optional),system.exports.full_pii,FALSE
+Technical Lead (Optional),system.roles.assign,FALSE
+Technical Lead (Optional),system.scopes.assign,FALSE
+Technical Lead (Optional),system.settings.manage,TRUE
+Technical Lead (Optional),system.users.create,FALSE
+Zonal Pastor (Tenant Admin),cells.manage,FALSE
+Zonal Pastor (Tenant Admin),cells.reports.approve,FALSE
+Zonal Pastor (Tenant Admin),cells.reports.create,FALSE
+Zonal Pastor (Tenant Admin),cells.reports.delete,FALSE
+Zonal Pastor (Tenant Admin),cells.reports.export,FALSE
+Zonal Pastor (Tenant Admin),cells.reports.read,TRUE
+Zonal Pastor (Tenant Admin),cells.reports.update,FALSE
+Zonal Pastor (Tenant Admin),finance.batches.create,FALSE
+Zonal Pastor (Tenant Admin),finance.batches.delete,FALSE
+Zonal Pastor (Tenant Admin),finance.batches.lock,TRUE
+Zonal Pastor (Tenant Admin),finance.batches.read,TRUE
+Zonal Pastor (Tenant Admin),finance.batches.unlock,TRUE
+Zonal Pastor (Tenant Admin),finance.batches.update,FALSE
+Zonal Pastor (Tenant Admin),finance.entries.create,FALSE
+Zonal Pastor (Tenant Admin),finance.entries.delete,FALSE
+Zonal Pastor (Tenant Admin),finance.entries.export,FALSE
+Zonal Pastor (Tenant Admin),finance.entries.read,TRUE
+Zonal Pastor (Tenant Admin),finance.entries.update,FALSE
+Zonal Pastor (Tenant Admin),finance.lookups.manage,TRUE
+Zonal Pastor (Tenant Admin),finance.verify,TRUE
+Zonal Pastor (Tenant Admin),registry.admin_notes.create,FALSE
+Zonal Pastor (Tenant Admin),registry.admin_notes.delete,FALSE
+Zonal Pastor (Tenant Admin),registry.admin_notes.read,FALSE
+Zonal Pastor (Tenant Admin),registry.admin_notes.update,FALSE
+Zonal Pastor (Tenant Admin),registry.attendance.create,FALSE
+Zonal Pastor (Tenant Admin),registry.attendance.delete,FALSE
+Zonal Pastor (Tenant Admin),registry.attendance.export,FALSE
+Zonal Pastor (Tenant Admin),registry.attendance.read,TRUE
+Zonal Pastor (Tenant Admin),registry.attendance.update,FALSE
+Zonal Pastor (Tenant Admin),registry.cells.assign,FALSE
+Zonal Pastor (Tenant Admin),registry.departments.create,FALSE
+Zonal Pastor (Tenant Admin),registry.departments.delete,FALSE
+Zonal Pastor (Tenant Admin),registry.departments.read,TRUE
+Zonal Pastor (Tenant Admin),registry.departments.update,FALSE
+Zonal Pastor (Tenant Admin),registry.firsttimers.create,FALSE
+Zonal Pastor (Tenant Admin),registry.firsttimers.delete,FALSE
+Zonal Pastor (Tenant Admin),registry.firsttimers.export,FALSE
+Zonal Pastor (Tenant Admin),registry.firsttimers.read,TRUE
+Zonal Pastor (Tenant Admin),registry.firsttimers.update,FALSE
+Zonal Pastor (Tenant Admin),registry.people.create,FALSE
+Zonal Pastor (Tenant Admin),registry.people.delete,FALSE
+Zonal Pastor (Tenant Admin),registry.people.export,FALSE
+Zonal Pastor (Tenant Admin),registry.people.merge,FALSE
+Zonal Pastor (Tenant Admin),registry.people.read,TRUE
+Zonal Pastor (Tenant Admin),registry.people.update,FALSE
+Zonal Pastor (Tenant Admin),reports.export,TRUE
+Zonal Pastor (Tenant Admin),reports.schedule,TRUE
+Zonal Pastor (Tenant Admin),reports.view,TRUE
+Zonal Pastor (Tenant Admin),system.audit.view,TRUE
+Zonal Pastor (Tenant Admin),system.exports.full_pii,TRUE
+Zonal Pastor (Tenant Admin),system.roles.assign,TRUE
+Zonal Pastor (Tenant Admin),system.scopes.assign,TRUE
+Zonal Pastor (Tenant Admin),system.settings.manage,TRUE
+Zonal Pastor (Tenant Admin),system.users.create,TRUE

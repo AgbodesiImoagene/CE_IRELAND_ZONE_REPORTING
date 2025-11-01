@@ -1,0 +1,26 @@
+[tool.black]
+line-length = 79
+target-version = ['py311', 'py312']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | venv
+  | _build
+  | buck-out
+  | build
+  | dist
+  | __pycache__
+)/
+'''
+
+[tool.black.preview]
+# Enable preview style improvements (future defaults)
+enabled = true
+

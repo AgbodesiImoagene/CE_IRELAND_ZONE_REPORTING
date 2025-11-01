@@ -1,0 +1,93 @@
+\documentclass[12pt,a4paper]{article}
+
+% Packages
+\usepackage{graphicx}   % for logos/images
+\usepackage{longtable}  % for document control tables
+\usepackage{hyperref}   % for clickable links
+\usepackage{geometry}   % page layout
+\usepackage{amsmath}    % for mathematical equations
+\geometry{margin=1in}
+
+% Title info
+\title{%
+    Christ Embassy Ireland Zone ---\\
+    Church Reporting Platform \\
+    \vspace{0.5cm}
+    \large Product Requirements Document (PRD)
+}
+\author{Prepared by: Agbodesi Imoagene}
+\date{\today}
+
+\begin{document}
+
+% Title Page
+\maketitle
+\thispagestyle{empty}
+\vfill
+\begin{center}
+    Version 0.1 \\
+    \vspace{0.3cm}
+    Confidential --- For Internal Use Only
+\end{center}
+\newpage
+
+% Document Control
+\section*{Document Control}
+
+\begin{longtable}{|p{3cm}|p{10cm}|}
+    \hline
+    \textbf{Document Title}  & Christ Embassy Ireland Zone Church Reporting Platform --- Product Requirements Document \\
+    \hline
+    \textbf{Version}         & 0.1                                                                              \\
+    \hline
+    \textbf{Author(s)}       & Agbodesi Imoagene                                                                \\
+    \hline
+    \textbf{Date}            & \today                                                                           \\
+    \hline
+    \textbf{Status}          & Draft                                                                            \\
+    \hline
+    \textbf{Confidentiality} & Confidential --- For Internal Use Only                                           \\
+    \hline
+\end{longtable}
+
+\section*{Revision History}
+\begin{longtable}{|p{2cm}|p{3cm}|p{3cm}|p{6cm}|}
+    \hline
+    \textbf{Version} & \textbf{Date} & \textbf{Author} & \textbf{Description of Change} \\
+    \hline
+    0.1              & \today        & A. Imoagene     & Initial draft created          \\
+    \hline
+\end{longtable}
+
+\section*{Approvals}
+\begin{longtable}{|p{5cm}|p{4cm}|p{4cm}|}
+    \hline
+    \textbf{Name} & \textbf{Role}               & \textbf{Date Approved} \\
+    \hline
+                  & Zonal Pastor                &                        \\
+    \hline
+                  & Group Pastor Representative &                        \\
+    \hline
+                  & Technical Lead              &                        \\
+    \hline
+\end{longtable}
+
+\newpage
+
+% Include other sections
+\input{executive_summary.tex}
+\input{background.tex}
+\input{objectives.tex}
+\input{scope.tex}
+\input{roles_permissions.tex}
+\input{functional_requirements.tex}
+\input{nonfunctional_requirements.tex}
+\input{kpis.tex}
+\input{architecture.tex}
+\input{data_model.tex}
+\input{reporting_requirements.tex}
+\input{workflows.tex}
+\input{risks_assumptions.tex}
+\input{appendices.tex}
+
+\end{document}

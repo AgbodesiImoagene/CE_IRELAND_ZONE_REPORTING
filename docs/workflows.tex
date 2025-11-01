@@ -1,0 +1,226 @@
+\section{User Journeys and Workflows}
+
+This section outlines the key user workflows within the Christ Embassy Ireland
+Zone Church Reporting Platform. Each workflow describes how a typical task is
+performed from start to finish, highlighting role interactions, system
+validations, and audit behaviour.
+
+\subsection{Overview}
+
+Workflows are grouped by portal and role. Each represents a real-world ministry
+process captured within the system and emphasises data integrity, accountability,
+and reporting traceability.
+
+\subsection{Registry Workflows}
+
+\paragraph{1. First-Timer Registration and Assimilation}
+
+\begin{enumerate}
+    \item A Church Administrator logs in to the Registry Portal and selects the
+    relevant church.
+    \item After a service, the clerk records first-timers:
+    \begin{itemize}
+        \item Full name, gender, phone/email, inviter/source.
+        \item Service attended (linked via \texttt{service\_id}).
+        \item Initial status: \texttt{New}.
+    \end{itemize}
+    \item The first-timer record appears in the “Follow-Up Pipeline” dashboard.
+    \item When follow-up occurs, a pastoral staff member updates status to
+    \texttt{Contacted} or \texttt{Returned}.
+    \item If the person joins a foundation class, the system allows conversion
+    to a Member record:
+    \begin{itemize}
+        \item The user clicks “Convert to Member.”
+        \item A new \texttt{people} record is created, copying contact info and
+        linking to the original first-timer entry.
+    \end{itemize}
+    \item The workflow ends when status becomes \texttt{Member} and is reflected
+    in assimilation KPIs.
+\end{enumerate}
+
+\paragraph{2. Service Attendance Recording}
+
+\begin{enumerate}
+    \item Church Administrator selects a \texttt{service\_date} and \texttt{service\_name}
+    (Sunday, Midweek, or Special).
+    \item Attendance counts are entered for men, women, teens, and children, as
+    well as totals for first-timers and new converts.
+    \item The system validates one attendance record per service per church.
+    \item On submission, an attendance summary is written to the
+    \texttt{attendance} table.
+    \item Background job updates
+    \texttt{summary\_attendance\_daily(org\_unit\_id, date)}.
+    \item Zonal and Group Pastors immediately see updated totals in their
+    dashboards.
+\end{enumerate}
+
+\paragraph{3. Member Record Update}
+
+\begin{enumerate}
+    \item Clerks or pastors edit member details (address, marital status,
+    foundation school completion, baptism date, etc.).
+    \item All edits are logged to \texttt{audit\_logs} with before/after snapshots.
+    \item Updates trigger recalculation of membership demographics and KPIs.
+\end{enumerate}
+
+\subsection{Finance Workflows}
+
+\paragraph{1. Offering Entry and Batch Locking}
+
+\begin{enumerate}
+    \item Finance Officer creates a new batch for a church and service.
+    \item Within the batch, each entry records:
+    \begin{itemize}
+        \item Transaction date, amount, fund, partnership arm, method, member or
+        cell reference, and comment.
+    \end{itemize}
+    \item Entries remain in \texttt{draft} status until verified.
+    \item When verification is complete:
+    \begin{itemize}
+        \item The first authorised user with
+        \texttt{finance.batches.lock} attempts to lock the batch.
+        \item The system requests a second approver (dual control).
+        \item Upon dual confirmation, the batch status updates to
+        \texttt{locked}.
+    \end{itemize}
+    \item Once locked:
+    \begin{itemize}
+        \item Entries become immutable.
+        \item Dashboards and summaries refresh automatically.
+        \item Audit trail logs both approvers’ actions.
+    \end{itemize}
+\end{enumerate}
+
+\paragraph{2. Partnership Tracking}
+
+\begin{enumerate}
+    \item Pastor or Finance Officer creates partnership records for members,
+    specifying:
+    \texttt{fund\_id}, \texttt{partnership\_arm\_id}, pledge amount, and cadence.
+    \item Finance entries linked to the same member and partnership arm
+    increment fulfilment totals automatically.
+    \item The partnership dashboard displays current fulfilment percentage,
+    outstanding balance, and due dates.
+\end{enumerate}
+
+\paragraph{3. Reconciliation Workflow}
+
+\begin{enumerate}
+    \item Zonal or Group Finance Team exports a verification summary by fund and
+    church.
+    \item After confirming bank deposits, the team marks verified batches as
+    \texttt{reconciled}.
+    \item Locked and reconciled batches contribute to financial KPIs.
+\end{enumerate}
+
+\subsection{Cells Workflows}
+
+\paragraph{1. Weekly Cell Report Submission}
+
+\begin{enumerate}
+    \item Cell Leader logs in to the Cells Portal and selects their assigned
+    cell.
+    \item Fills in:
+    \begin{itemize}
+        \item Date and meeting time.
+        \item Attendance, first-timers, new converts.
+        \item Testimonies and notes.
+        \item Offerings total.
+        \item Meeting type (prayer, Bible study, outreach).
+    \end{itemize}
+    \item On submission:
+    \begin{itemize}
+        \item Report status = \texttt{submitted}.
+        \item Offerings total triggers an automated creation of a
+        \texttt{finance\_entry} with
+        \texttt{source\_type='cell\_report'} and
+        \texttt{source\_id=cell\_report.id}.
+        \item The finance entry appears in Finance Portal under the respective
+        church for verification.
+    \end{itemize}
+    \item Pastors can review and approve reports (optional workflow step),
+    changing status to \texttt{approved}.
+\end{enumerate}
+
+\paragraph{2. Cell Reporting Compliance}
+
+\begin{enumerate}
+    \item System checks each active cell weekly.
+    \item Cells without reports are marked “missing submission.”
+    \item Reports Portal dashboard visualises submission compliance by church
+    and group.
+\end{enumerate}
+
+\subsection{Reports Portal Workflows}
+
+\paragraph{1. Dashboard Interaction and Drill-Down}
+
+\begin{enumerate}
+    \item User logs in and the system determines accessible scope via assigned
+    roles.
+    \item Dashboard displays summary KPIs:
+    attendance, giving, membership, cell compliance.
+    \item User drills down:
+    \texttt{Zone → Group → Church → Cell → Member}.
+    \item Filters: date range, fund, service, or partnership arm.
+    \item Data sourced from materialized summary tables.
+\end{enumerate}
+
+\paragraph{2. Report Export}
+
+\begin{enumerate}
+    \item User applies filters and clicks “Export.”
+    \item If small ($\leq$10,000 rows), export is synchronous; otherwise, a background
+    job is queued.
+    \item Export file (CSV, Excel, or PDF) generated and stored in S3.
+    \item User notified with download link; audit log entry created.
+\end{enumerate}
+
+\paragraph{3. Scheduled Reporting}
+
+\begin{enumerate}
+    \item Pastor configures recurring reports (e.g., Weekly or Monthly Summary).
+    \item Job scheduler triggers export and sends email via background worker.
+    \item The \texttt{exports} table logs delivery time, recipient, and success
+    status.
+\end{enumerate}
+
+\subsection{Administrative Workflows}
+
+\paragraph{1. User and Role Provisioning}
+
+\begin{enumerate}
+    \item Zonal Pastor creates Group Pastors and assigns group scopes.
+    \item Group Pastors create Church Pastors/Coordinators.
+    \item Church Pastors create Church Administrators, Finance Officers, and Cell
+    Leaders.
+    \item All actions audited with user, scope, and timestamp.
+\end{enumerate}
+
+\paragraph{2. Importing Legacy Data}
+
+\begin{enumerate}
+    \item Admin uploads legacy spreadsheet (e.g., membership list).
+    \item System displays field mapping preview.
+    \item Validation engine checks for missing or invalid data.
+    \item User corrects and re-uploads if errors exist.
+    \item Upon successful import:
+    \begin{itemize}
+        \item Records inserted under correct church/org scope.
+        \item Audit log created with import job reference.
+    \end{itemize}
+\end{enumerate}
+
+\subsection{Workflow Consistency Rules}
+
+\begin{itemize}
+    \item Every workflow action must be traceable in \texttt{audit\_logs}.
+    \item Data transitions follow strict states:
+    \begin{itemize}
+        \item \textbf{Finance:} draft → verified → reconciled → locked
+        \item \textbf{Cells:} submitted → reviewed → approved
+        \item \textbf{First-timers:} new → contacted → returned → member
+    \end{itemize}
+    \item State changes are immutable in reverse unless unlocked by authorised
+    personnel with dual control.
+\end{itemize}

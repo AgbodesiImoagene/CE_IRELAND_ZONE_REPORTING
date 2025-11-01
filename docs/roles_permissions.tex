@@ -1,0 +1,342 @@
+\section{Roles \& Permissions}
+
+This section defines the access-control model for the platform. It specifies
+the organisational hierarchy, scope semantics, role definitions, permission
+catalogue, delegation rules, high-risk actions (dual control), audit
+requirements, and reference enforcement patterns (API checks and Postgres RLS).
+
+\subsection{Access Control Model Overview}
+
+\begin{itemize}
+    \item \textbf{RBAC with Scopes:} A role grants a set of permissions (the ``what'').
+          Each user also has one or more \emph{organisational assignments} that bound
+          their access (the ``where''): a specific org unit and a scope type.
+    \item \textbf{Org Hierarchy:} \texttt{region} $\rightarrow$ \texttt{zone} $\rightarrow$ \texttt{group} $\rightarrow$ \texttt{church} $\rightarrow$ \texttt{outreach}.
+          Cells belong to a church (not an org unit type).
+    \item \textbf{Enforcement:} Every request must satisfy both:
+          \begin{enumerate}
+              \item the user holds the \emph{required permission}, and
+              \item the \emph{target record's org location} lies within at least one of the user's
+                    assigned scopes.
+          \end{enumerate}
+\end{itemize}
+
+\subsection{Organisational Entities \& Scope Semantics}
+
+\paragraph{Org Units}
+\begin{itemize}
+    \item Table: \texttt{org\_units(id, name, type, parent\_id)} where \texttt{type}
+          $\in$ \{\texttt{region, zone, group, church, outreach}\}.
+\end{itemize}
+
+\paragraph{Assignments}
+\begin{itemize}
+    \item Table: \texttt{org\_assignments(id, user\_id, org\_unit\_id, role\_id,
+              scope\_type)} where \texttt{scope\_type} $\in$ \{\texttt{self},
+          \texttt{subtree}, \texttt{custom\_set}\}.
+    \item For \texttt{custom\_set}, a join table
+          \texttt{org\_assignment\_units(assignment\_id, org\_unit\_id)} enumerates
+          allowed units.
+\end{itemize}
+
+\paragraph{Record Localisation}
+Every domain record carries \texttt{tenant\_id} and an org reference:
+\begin{itemize}
+    \item \textbf{People/Members:} \texttt{people.org\_unit\_id} (their primary church).
+    \item \textbf{Services \& Attendance:} \texttt{services.org\_unit\_id}.
+    \item \textbf{Cells \& Cell Reports:} \texttt{cells.org\_unit\_id} (church), \texttt{cell\_reports.cell\_id}.
+    \item \textbf{Finance Entries:} \texttt{finance\_entries.org\_unit\_id} (church owning the record); may also link \texttt{service\_id} or \texttt{cell\_id}.
+\end{itemize}
+
+\subsection{Roles (Templates)}
+
+Roles are templates; they can be adjusted by the Zonal Pastor (Tenant Admin) if
+needed. Default roles:
+
+\begin{itemize}
+    \item \textbf{Zonal Pastor (Tenant Admin):} Full zone oversight; manage users, roles, lookups, and all reports (scope typically \texttt{subtree} at zone level).
+    \item \textbf{Group Pastor:} Manage churches within assigned group(s); create church pastors/coordinators; view group reports.
+    \item \textbf{Church Pastor / Coordinator:} Manage their local church and assign portal-specific users; limited reporting.
+    \item \textbf{Church Administrator:} Registry portal; capture and update people, first-timers, departments, attendance for assigned churches.
+    \item \textbf{Finance Officer:} Finance portal; create/verify/lock batches and entries; view finance reports for assigned churches.
+    \item \textbf{Cell Leader:} Cells portal; submit cell reports and view own cell history; no wider access.
+    \item \textbf{Reports Viewer (Pastoral):} Read-only dashboards/reports within assigned scope.
+    \item \textbf{Technical Lead (Optional):} For zone-level setup; manage lookups (funds, partnership arms), not PII beyond necessity.
+\end{itemize}
+
+\subsection{Permission Catalogue (Dot-Notation)}
+
+Permissions are grouped by portal. CRUD verbs are explicit. ``Export'' and
+``Approve/Lock'' are separate privileges.
+
+\paragraph{Registry}
+\begin{itemize}
+    \item \texttt{registry.people.read/create/update/delete}
+    \item \texttt{registry.people.merge} (deduplicate/merge)
+    \item \texttt{registry.people.export}
+    \item \texttt{registry.firsttimers.read/create/update/delete/export}
+    \item \texttt{registry.attendance.read/create/update/delete/export}
+    \item \texttt{registry.departments.read/create/update/delete}
+    \item \texttt{registry.cells.assign} (assign member to cell; convenience overlap)
+    \item \texttt{registry.admin\_notes.read/create/update/delete} (pastoral notes; restricted)
+\end{itemize}
+
+\paragraph{Finance}
+\begin{itemize}
+    \item \texttt{finance.entries.read/create/update/delete/export}
+    \item \texttt{finance.batches.read/create/update/delete}
+    \item \texttt{finance.batches.lock} \quad (dual control)
+    \item \texttt{finance.batches.unlock} \quad (dual control; higher bar)
+    \item \texttt{finance.verify} \quad (mark entries verified/reconciled)
+    \item \texttt{finance.lookups.manage} \quad (funds, partnership arms, payment methods)
+\end{itemize}
+
+\paragraph{Cells}
+\begin{itemize}
+    \item \texttt{cells.reports.read/create/update/delete/export}
+    \item \texttt{cells.manage} (create/update cells, leaders, venues)
+    \item \texttt{cells.reports.approve} (optional approval workflow)
+\end{itemize}
+
+\paragraph{Reports}
+\begin{itemize}
+    \item \texttt{reports.view} \quad (dashboards, drill-down)
+    \item \texttt{reports.export} \quad (CSV/Excel/PDF)
+    \item \texttt{reports.schedule} \quad (scheduled email reports)
+\end{itemize}
+
+\paragraph{System / Administration}
+\begin{itemize}
+    \item \texttt{system.users.create/disable/reset\_password}
+    \item \texttt{system.roles.assign} \quad (assign role templates to users)
+    \item \texttt{system.scopes.assign} \quad (assign org scopes to users)
+    \item \texttt{system.audit.view}
+    \item \texttt{system.settings.manage} \quad (zone settings, consent texts)
+    \item \texttt{system.exports.full\_pii} \quad (extra-protected export)
+\end{itemize}
+
+\subsection{Permission Matrix (Default)}
+
+\begin{longtable}{|p{4.2cm}|p{10.8cm}|}
+    \hline
+    \textbf{Role}               & \textbf{Key Permissions (all within assigned scope)}                                                               \\
+    \hline
+    Zonal Pastor (Tenant Admin) &
+    \texttt{reports.view/export/schedule},
+    \texttt{system.users.create}, \texttt{system.roles.assign}, \texttt{system.scopes.assign}, \texttt{system.audit.view}, \texttt{system.settings.manage},
+    all Registry/Finance/Cells read,
+    Finance lock/unlock (dual-control partner required), limited \texttt{system.exports.full\_pii}.                                                  \\
+    \hline
+    Group Pastor                &
+    \texttt{reports.view/export}, Registry read, Cells read, Finance read,
+    \texttt{system.users.create} (within group), \texttt{system.roles.assign} (church-level roles), \texttt{system.scopes.assign} (within group).
+    No finance lock/unlock by default (optional).                                                                                                    \\
+    \hline
+    Church Pastor / Coordinator &
+    \texttt{reports.view/export} (church),
+    Registry read/create/update,
+    Cells manage (church),
+    Finance read, \texttt{finance.verify} (optional),
+    \texttt{system.users.create} (portal users for church), \texttt{system.roles.assign} (portal roles).                                             \\
+    \hline
+    Church Administrator        &
+    \texttt{registry.people.*} (no delete/merge unless granted),
+    \texttt{registry.firsttimers.*}, \texttt{registry.attendance.*}, \texttt{registry.departments.*}. No reports export beyond Registry, no Finance. \\
+    \hline
+    Finance Officer             &
+    \texttt{finance.entries.*}, \texttt{finance.verify}, \texttt{finance.batches.*}, \texttt{finance.batches.lock} (dual),
+    read-only \texttt{reports.view} for Finance, \texttt{finance.entries.export}. No Registry/Cells write.                                           \\
+    \hline
+    Cell Leader                 &
+    \texttt{cells.reports.create/update} (own cell only), \texttt{cells.reports.read} (own cell),
+    no exports by default.                                                                                                                           \\
+    \hline
+    Reports Viewer (Pastoral)   &
+    \texttt{reports.view/export} (assigned scope only).                                                                                              \\
+    \hline
+    Technical Lead (Optional)   &
+    \texttt{system.settings.manage}, \texttt{finance.lookups.manage}, read-only \texttt{reports.view}, no PII exports.                               \\
+    \hline
+\end{longtable}
+
+\subsection{Delegation \& Provisioning Rules}
+
+\begin{itemize}
+    \item \textbf{Top-down provisioning:} Zonal Pastor can create Group Pastors and assign group scopes. Group Pastors can create Church Pastors/Coordinators within their group(s). Church Pastors can create portal users (Church Administrator, Finance Officer, Cell Leader) for their churches/cells.
+    \item \textbf{Scope assignment:} Each user may have multiple assignments (e.g., two churches). The union of assignments defines \emph{effective scope}.
+    \item \textbf{Impersonation:} Not allowed in MVP. If added later, must be audited and time-limited.
+\end{itemize}
+
+\subsection{High-Risk Actions (Dual Control \& Step-Up Auth)}
+
+\begin{itemize}
+    \item \textbf{Finance Batch Lock/Unlock:} Requires \emph{two distinct users}:
+          \begin{enumerate}
+              \item Locker: holds \texttt{finance.batches.lock}
+              \item Approver: holds \texttt{finance.verify} or \texttt{finance.batches.lock} and is
+                    not the Locker
+          \end{enumerate}
+          Unlock requires \texttt{finance.batches.unlock} + approval by Zonal/Group Pastor or designated approver.
+    \item \textbf{Full-PII Export:} Requires \texttt{system.exports.full\_pii} and step-up 2FA confirmation.
+    \item \textbf{Delete/Merge People:} \texttt{registry.people.delete} and \texttt{registry.people.merge} gated by step-up 2FA and audit reason.
+\end{itemize}
+
+\subsection{PII \& Data Masking}
+
+\begin{itemize}
+    \item \textbf{Masking by Portal:} Finance screens show masked contact info by default (e.g., \texttt{jo\*{\@}example.com}, \texttt{085****321}); full reveal requires \texttt{registry.people.read} and explicit click-to-reveal with audit trail.
+    \item \textbf{Pastoral Notes:} \texttt{registry.admin\_notes.*} restricted to pastoral roles; excluded from standard exports.
+\end{itemize}
+
+\subsection{Audit Logging (Immutable)}
+
+Audit \emph{all writes} and the following reads/exports:
+\begin{itemize}
+    \item Login, logout, 2FA enable/disable; password resets.
+    \item \textbf{Reads:} click-to-reveal of masked PII; full-PII exports; audit-log access.
+    \item \textbf{Writes:} create/update/delete across Registry/Finance/Cells; merge people; batch lock/unlock; verify/reconcile; role/scope assignments; lookup changes.
+\end{itemize}
+Audit records: \texttt{(actor\_id, action, entity\_type, entity\_id, before\_json, after\_json, ip, user\_agent, occurred\_at)}.
+
+\subsection{Session Security}
+
+\begin{itemize}
+    \item \textbf{2FA:} Required for Zonal/Group/Church Pastors and Finance Officers.
+    \item \textbf{Session Timeout:} 30 min idle (portal configurable), absolute 12 h.
+    \item \textbf{Password Policy:} 12+ chars, breach-checked; rotation not required but compromised detection enforced.
+    \item \textbf{SSO (Optional):} Google/Microsoft SSO may be enabled at tenant level.
+\end{itemize}
+
+\subsection{API Enforcement Pattern}
+
+Every API endpoint declares a required permission $p$ and resolves a target
+\texttt{org\_unit\_id}. The request is allowed iff the user holds $p$ and at
+least one assignment covers the target org.
+
+\paragraph{Effective-Access Pseudocode}
+\begin{verbatim}
+function can(user, permission, target_org_id):
+  if not user.permissions.contains(permission):
+    return false
+  for a in user.assignments:
+    if a.scope_type == 'self' and a.org_id == target_org_id:
+      return true
+    if a.scope_type == 'subtree' and is_descendant(target_org_id, a.org_id):
+      return true
+    if a.scope_type == 'custom_set' and target_org_id in a.allowed_org_ids:
+      return true
+  return false
+\end{verbatim}
+
+\subsection{Database Enforcement (Postgres RLS)}
+
+All tenant tables include \texttt{tenant\_id} and an org reference column.
+Row-Level Security (RLS) policies enforce per-row visibility.
+
+\paragraph{Helper Functions (Sketch)}
+\begin{verbatim}
+-- Returns true if current_user has any assignment covering target org
+CREATE FUNCTION has_org_access(target_org_id uuid) RETURNS boolean AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM org_assignments oa
+    JOIN users u ON u.id = oa.user_id
+    WHERE u.id = current_setting('app.user_id')::uuid
+      AND (
+        (oa.scope_type = 'self' AND oa.org_unit_id = target_org_id) OR
+        (oa.scope_type = 'subtree' AND 
+                is_descendant_org(target_org_id, oa.org_unit_id)) OR
+        (oa.scope_type = 'custom_set' AND EXISTS (
+           SELECT 1 FROM org_assignment_units oau
+           WHERE oau.assignment_id = oa.id AND oau.org_unit_id = target_org_id))
+      )
+  );
+$$ LANGUAGE sql STABLE;
+
+-- Permissions are cached into current_setting('app.perms') as a text[] at login.
+CREATE FUNCTION has_perm(p text) RETURNS boolean AS $$
+  SELECT p = ANY (current_setting('app.perms')::text[]);
+$$ LANGUAGE sql STABLE;
+\end{verbatim}
+
+\paragraph{Example Policy}
+\begin{verbatim}
+ALTER TABLE finance_entries ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY finance_read_policy ON finance_entries
+FOR SELECT
+USING (
+  current_setting('app.tenant_id')::uuid = tenant_id
+  AND has_perm('finance.entries.read')
+  AND has_org_access(org_unit_id)
+);
+
+CREATE POLICY finance_write_policy ON finance_entries
+FOR INSERT WITH CHECK (
+  current_setting('app.tenant_id')::uuid = tenant_id
+  AND has_perm('finance.entries.create')
+  AND has_org_access(org_unit_id)
+);
+
+-- Similarly for UPDATE/DELETE with corresponding permissions.
+\end{verbatim}
+
+\subsection{Field-Level Constraints}
+
+\begin{itemize}
+    \item \textbf{Portal Affinity:} Even if a user holds a broad role, UI and API
+          endpoints must only expose data relevant to the current portal unless the user
+          holds \texttt{reports.view} or system-level privileges.
+    \item \textbf{Cell Leader Boundaries:} Cell Leaders can only access
+          \texttt{cells.reports.*} for their own \texttt{cell\_id}; API validates author/owner.
+\end{itemize}
+
+\subsection{Lookups \& Managed Lists}
+
+\begin{itemize}
+    \item \textbf{Funds} and \textbf{Partnership Arms} are managed by users with
+          \texttt{finance.lookups.manage}. Custom campaigns are added with active date
+          ranges. Historical entries preserve referential integrity.
+    \item \textbf{Payment Methods} list (e.g., cash, KingsPay, bank transfer, POS, cheque) is also managed here.
+\end{itemize}
+
+\subsection{Examples (Worked)}
+
+\paragraph{Example 1: Finance Officer locks Sunday batch}
+\begin{enumerate}
+    \item Officer has: \texttt{finance.entries.*},
+          \texttt{finance.batches.read/create/update}, \texttt{finance.batches.lock}.
+    \item Scope: \texttt{subtree} for Church A.
+    \item Action: Lock requires counter-approval by another user (Finance Officer or
+          Pastor) with overlapping scope. Both events are audited.
+\end{enumerate}
+
+\paragraph{Example 2: Group Pastor views reports for entire group}
+\begin{enumerate}
+    \item Holds: \texttt{reports.view/export}.
+    \item Scope: \texttt{subtree} at Group G.
+    \item Dashboards include all churches in G; drill-down stops at church/cell records
+          within G.
+\end{enumerate}
+
+\paragraph{Example 3: Cell Leader submits report}
+\begin{enumerate}
+    \item Holds: \texttt{cells.reports.create/update}.
+    \item API validates \texttt{cell\_id} is the leader's assigned cell and the cell's
+          \texttt{org\_unit\_id} is within scope (church).
+\end{enumerate}
+
+\subsection{Permissions Matrix (CSV for Reference)}
+
+For importer/testing, an equivalent CSV (not part of the PDF) can define
+role-to-permission mappings for seed data. Example columns: 
+
+\texttt{role\_name, permission, default\_granted[bool]}.
+
+\subsection{Operational Controls}
+
+\begin{itemize}
+    \item \textbf{Exports:} All exports include a footer with generator, timestamp, and scope; full-PII exports require elevated permission and step-up 2FA.
+    \item \textbf{Change Windows:} Unlocking a locked batch is time-limited (e.g., within 7 days) unless Zonal Pastor approves an exception.
+    \item \textbf{Rate Limits:} Apply rate limits to high-volume reads/exports per user to protect performance.
+\end{itemize}

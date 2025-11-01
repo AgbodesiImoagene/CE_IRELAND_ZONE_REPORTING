@@ -1,0 +1,188 @@
+\section{Reporting Requirements}
+
+This section defines the functional and technical reporting requirements for the
+Christ Embassy Ireland Zone Church Reporting Platform. Reports are generated
+from verified data across the Registry, Finance, and Cells modules, with access
+and visibility determined by each user’s organisational scope and permissions.
+
+\subsection{Purpose}
+
+The Reports Portal (\texttt{reports.<zone>.ce.church}) provides a unified,
+real-time view of church operations and performance metrics across all levels of
+the hierarchy—zone, group, church, and cell. It consolidates data from the
+Registry, Finance, and Cells modules, producing dashboards and detailed reports
+for pastors and authorised leaders.
+
+\subsection{General Reporting Principles}
+
+\begin{itemize}
+    \item Reports must reflect only \textbf{verified and locked} data from
+    Finance, \textbf{approved} Cell Reports, and \textbf{submitted and approved}
+    Attendance records.
+    \item All data must be aggregated according to organisational hierarchy:
+    Region → Zone → Group → Church → Cell.
+    \item Access to reports is restricted to a user’s defined scope. Users can
+    only view or export data for churches, groups, or cells they oversee.
+    \item Every report shall include:
+    \begin{enumerate}
+        \item Scope (zone, group, church, or cell)
+        \item Report period (start date – end date)
+        \item Generation timestamp
+        \item Generating user and role
+    \end{enumerate}
+    \item All reports shall be exportable in CSV, Excel, and PDF formats.
+\end{itemize}
+
+\subsection{Dashboards Overview}
+
+\paragraph{1. Membership Dashboard}
+\begin{itemize}
+    \item Total registered members by church, group, and zone.
+    \item Membership growth over time (weekly and monthly deltas).
+    \item Demographics: gender, age groups, marital status.
+    \item Foundation School completion rate.
+    \item Baptism tracking: completed vs pending.
+    \item Department participation and leadership distribution.
+\end{itemize}
+
+\paragraph{2. First-Timers \& Assimilation Dashboard}
+\begin{itemize}
+    \item First-timer registrations by service and date.
+    \item First-timer follow-up pipeline: New → Contacted → Returned → Member.
+    \item Conversion rates over rolling 30-day and 60-day windows.
+    \item Assimilation performance by church and group.
+    \item First-timer retention trends and percentage of visitors who become
+    regular attendees.
+\end{itemize}
+
+\paragraph{3. Attendance Dashboard}
+\begin{itemize}
+    \item Attendance trends per service (Sunday, Midweek, Special).
+    \item Demographic splits (men, women, teens, kids).
+    \item First-timer and new convert counts per service.
+    \item Comparative attendance growth by group or church.
+    \item Rolling averages and month-on-month percentage change.
+\end{itemize}
+
+\paragraph{4. Finance Dashboard}
+\begin{itemize}
+    \item Offerings, tithes, seeds, and first-fruits by service and date.
+    \item Partnership contributions by arm (Rhapsody of Realities, Healing
+    School, InnerCity Mission, Loveworld TV, custom campaigns).
+    \item Total giving by fund and by payment method.
+    \item Per-capita giving (total giving ÷ average attendance).
+    \item Partnership fulfilment tracking by member and arm.
+    \item Cell offering reconciliation totals (summed from cell reports).
+\end{itemize}
+
+\paragraph{5. Cells Dashboard}
+\begin{itemize}
+    \item Active vs inactive cells by church and group.
+    \item Weekly report submission compliance rate.
+    \item Average cell attendance and outreach results.
+    \item First-timers and new converts from cell meetings.
+    \item Testimony and offering summaries.
+\end{itemize}
+
+\paragraph{6. Combined Zone Overview}
+\begin{itemize}
+    \item Consolidated zone-level view of membership, attendance, giving, and
+    cell participation.
+    \item Comparative ranking of groups or churches based on growth, giving, and
+    assimilation performance.
+    \item KPI summaries for leadership reports and quarterly reviews.
+\end{itemize}
+
+\subsection{Standard Reports (Tabular Exports)}
+
+\begin{itemize}
+    \item \textbf{RPT-01: Member Directory} --- Export of all members with
+    contact details, foundation/baptism status, and department.
+    \item \textbf{RPT-02: First-Timer Log} --- Detailed list of first-timers,
+    visit date, inviter, contact status, and assimilation outcome.
+    \item \textbf{RPT-03: Attendance Register} --- Attendance summaries by
+    service, including totals and demographic breakdown.
+    \item \textbf{RPT-04: Finance Summary} --- Totals by fund, partnership arm,
+    and payment method, aggregated by date range and church.
+    \item \textbf{RPT-05: Partnership Fulfilment Report} --- Partner list with
+    pledge, fulfilment progress, and outstanding balance.
+    \item \textbf{RPT-06: Cell Meeting Summary} --- Cell attendance, first
+    timers, testimonies, offerings, and meeting types.
+    \item \textbf{RPT-07: Church Growth Summary} --- Combined metrics across
+    membership, attendance, finance, and cells for longitudinal analysis.
+\end{itemize}
+
+\subsection{Drill-Down Hierarchies}
+
+Dashboards and reports shall support the following hierarchical navigation:
+
+\begin{itemize}
+    \item Zone → Group → Church → Cell → Individual Member
+    \item Zone → Group → Church → Service
+\end{itemize}
+
+Drill-down capability must respect access scope and permissions, ensuring users
+cannot traverse below their authorised level. Each layer should display both
+aggregated metrics and access to the next level for detailed insights.
+
+\subsection{Scheduled \& Automated Reports}
+
+\begin{itemize}
+    \item Pastors and administrators may configure recurring reports to be sent
+    daily, weekly, or monthly via email.
+    \item Supported schedules:
+    \begin{itemize}
+        \item Weekly Summary (attendance, finance, cell compliance)
+        \item Monthly Church Overview
+        \item Quarterly Zone KPI Report
+    \end{itemize}
+    \item All scheduled reports shall be generated by background jobs and
+    delivered as downloadable PDF or Excel files.
+    \item System logs all automated deliveries in the \texttt{exports} table
+    with metadata: recipient, scope, schedule, and delivery timestamp.
+\end{itemize}
+
+\subsection{Data Sources and Validation Rules}
+
+\begin{itemize}
+    \item Attendance data drawn from \texttt{attendance} table joined to
+    \texttt{services} and \texttt{org\_units}.
+    \item Finance data drawn from \texttt{finance\_entries} where
+    \texttt{verified\_status IN ('verified','reconciled','locked')}.
+    \item Cell metrics drawn from approved \texttt{cell\_reports}.
+    \item Membership counts and demographics derived from \texttt{people} and
+    \texttt{memberships} tables.
+    \item All aggregates are filtered by \texttt{tenant\_id} and limited by
+    organisational scope.
+\end{itemize}
+
+\subsection{Performance Requirements for Reports}
+
+\begin{itemize}
+    \item Dashboard load time (P95) $\leq$2 seconds using materialized views.
+    \item Large exports ($\geq$10k rows) generated asynchronously with email
+    notification when ready.
+    \item Aggregations precomputed nightly or on data-change events.
+    \item All exports tagged with tenant, scope, and timestamp for audit.
+\end{itemize}
+
+\subsection{Report Access \& Audit Logging}
+
+\begin{itemize}
+    \item Every report view, export, or scheduled delivery shall log:
+    user ID, scope, report type, filters, and timestamp.
+    \item Full-PII exports require \texttt{system.exports.full\_pii} permission
+    and step-up authentication.
+    \item Audit entries stored in \texttt{audit\_logs} with action
+    \texttt{report.export} or \texttt{report.view}.
+\end{itemize}
+
+\subsection{Future Extensions}
+
+\begin{itemize}
+    \item Comparative cross-zone reporting for multi-zone leadership.
+    \item Integration with KingsPay transaction summaries for automated import.
+    \item Predictive dashboards estimating growth or giving trends using
+    historical data.
+    \item Optional mobile dashboard app for pastors with read-only access.
+\end{itemize}

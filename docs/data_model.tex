@@ -1,0 +1,255 @@
+\section{Data Model}
+
+This section defines the core entities, relationships, and constraints for the
+Christ Embassy Ireland Zone Church Reporting Platform. All tables include
+\texttt{tenant\_id UUID NOT NULL} and standard audit columns
+(\texttt{created\_at, created\_by, updated\_at, updated\_by}). Organisational
+scope is enforced with \texttt{org\_unit\_id} and Postgres Row-Level Security.
+
+\subsection{High-level ERD (ASCII)}
+
+\begin{verbatim}
+        +-----------+         +-----------------+        +------------------+
+        | org_units |<------->| org_assignments |<------>| users            |
+        +-----------+         +-----------------+        +------------------+
+              ^                         ^
+              |                         |
+              |                  +-------------------------+
+              |                  | org_assignment_units    |
+              |                  +-------------------------+
+              |
+   +------------------+        +------------------+
+   | services         |        | people           |<------------------+
+   +------------------+        +------------------+                   |
+   | org_unit_id (FK) |        | org_unit_id (FK) |                   |
+   +---------+--------+        +---------+--------+                   |
+             |                           |                            |
+             v                           v                            |
+        +---------+               +-------------+               +-----------+
+        |attendance|              |memberships  |               |departments|
+        +--------- +              +-------------+               +-----------+
+                                  | person_id FK|                     |
+                                  +------+------+                     |
+                                         |                           v
+                                         |                    +------------------+
+                                         |                    | department_roles |
+                                         |                    +------------------+
+                                         |
+                                +-----------------+
+                                | first_timers    |
+                                +-----------------+
+
+   +-----------+       +------------------+      +------------------+
+   | cells     |<----->| cell_reports     |      | funds            |
+   +-----------+       +------------------+      +------------------+
+   | org_unit_id (FK)  | cell_id (FK)     |      | type/fund_name   |
+   +-----------+       +------------------+      +------------------+
+
+   +------------------+    +-------------------+     +------------------------+
+   | finance_entries  |<---| batches           |     | partnerships           |
+   +------------------+    +-------------------+     +------------------------+
+   | fund_id (FK)     |    | service_id (FK)   |     | person_id, fund_id     |
+   | person_id/cell_id|    | org_unit_id (FK)  |     | cadence, start/end     |
+   | service_id (FK)  |    | status LOCKED/... |     | target_amount optional |
+   | source_type       \    +-------------------+     +------------------------+
+   +-------------------\------------------------------------+
+                        \-- optional link from cell_reports offerings
+\end{verbatim}
+
+\subsection{Core Reference and Access Tables}
+
+\paragraph{org\_units}
+\begin{itemize}
+  \item \textbf{Columns:} \texttt{id PK}, \texttt{tenant\_id}, \texttt{name},
+        \texttt{type ENUM(region, zone, group, church, outreach)}, \texttt{parent\_id FK NULL}.
+  \item \textbf{Indexes:} \texttt{(tenant\_id, type)}, \texttt{(parent\_id)}, btree path (materialized) optional for fast subtree checks.
+\end{itemize}
+
+\paragraph{users, roles, permissions}
+\begin{itemize}
+  \item \textbf{users:} \texttt{id PK}, \texttt{tenant\_id}, \texttt{email UNIQUE}, \texttt{password\_hash}, 2FA flags, status.
+  \item \textbf{roles:} \texttt{id PK}, \texttt{name UNIQUE per tenant}.
+  \item \textbf{role\_permissions:} \texttt{role\_id FK, permission TEXT} (dot-notation).
+\end{itemize}
+
+\paragraph{org\_assignments, org\_assignment\_units}
+\begin{itemize}
+  \item \textbf{org\_assignments:} \texttt{id PK}, \texttt{user\_id FK}, \texttt{org\_unit\_id FK}, \texttt{role\_id FK}, \texttt{scope\_type ENUM(self, subtree, custom\_set)}.
+  \item \textbf{org\_assignment\_units:} \texttt{assignment\_id FK}, \texttt{org\_unit\_id FK} (for custom sets).
+\end{itemize}
+
+\subsection{Registry Domain}
+
+\paragraph{people}
+\begin{itemize}
+  \item \textbf{Columns:} \texttt{id PK}, \texttt{tenant\_id}, \texttt{org\_unit\_id FK(church)}, \texttt{member\_code UNIQUE per tenant},
+  names (title, first, last, alias), \texttt{dob DATE}, \texttt{gender ENUM}, contact (email, phone),
+  address (line1, line2, town, county, eircode), marital\_status, consent flags.
+  \item \textbf{Indexes:} \texttt{(tenant\_id, org\_unit\_id)}, trigram on \texttt{(first\_name,last\_name,email,phone)} for dedupe/search.
+\end{itemize}
+
+\paragraph{memberships}
+\begin{itemize}
+  \item \textbf{Columns:} \texttt{person\_id PK/FK}, \texttt{status ENUM(visitor, regular, member, partner)},
+  \texttt{join\_date DATE}, \texttt{foundation\_completed BOOL}, \texttt{baptism\_date DATE NULL}, \texttt{cell\_id FK NULL}.
+\end{itemize}
+
+\paragraph{departments, department\_roles}
+\begin{itemize}
+  \item \textbf{departments:} \texttt{id PK}, \texttt{tenant\_id}, \texttt{org\_unit\_id FK}, \texttt{name}, status.
+  \item \textbf{department\_roles:} \texttt{id PK}, \texttt{dept\_id FK}, \texttt{person\_id FK}, \texttt{role ENUM(leader, member)}, start\_date, end\_date.
+\end{itemize}
+
+\paragraph{services}
+\begin{itemize}
+  \item \textbf{Columns:} \texttt{id PK}, \texttt{tenant\_id}, \texttt{org\_unit\_id FK}, \texttt{name ENUM(Sunday, Midweek, Special) or TEXT}, \texttt{service\_date DATE}, \texttt{service\_time TIME}.
+  \item \textbf{Uniqueness:} \texttt{UNIQUE(tenant\_id, org\_unit\_id, service\_date, name)}.
+\end{itemize}
+
+\paragraph{attendance}
+\begin{itemize}
+  \item \textbf{Columns:} \texttt{id PK}, \texttt{tenant\_id}, \texttt{service\_id FK}, men\_count, women\_count, teens\_count, kids\_count,
+  first\_timers\_count, new\_converts\_count, total\_attendance, notes.
+  \item \textbf{Uniqueness:} \texttt{UNIQUE(tenant\_id, service\_id)} (one attendance per service).
+  \item \textbf{Note:} service carries org and date; linking via \texttt{service\_id} keeps attendance \emph{service-aware}.
+\end{itemize}
+
+\paragraph{first\_timers}
+\begin{itemize}
+  \item \textbf{Columns:} \texttt{id PK}, \texttt{tenant\_id}, \texttt{person\_id FK NULL}, \texttt{service\_id FK},
+  source/inviter, status ENUM(New, Contacted, Returned, Member), notes.
+\end{itemize}
+
+\subsection{Cells Domain}
+
+\paragraph{cells}
+\begin{itemize}
+  \item \textbf{Columns:} \texttt{id PK}, \texttt{tenant\_id}, \texttt{org\_unit\_id FK(church)}, \texttt{name}, \texttt{leader\_id FK(people) NULL},
+  \texttt{assistant\_leader\_id FK NULL}, venue, meeting\_day ENUM, meeting\_time TIME, status ENUM(active,inactive).
+\end{itemize}
+
+\paragraph{cell\_reports}
+\begin{itemize}
+  \item \textbf{Columns:} \texttt{id PK}, \texttt{tenant\_id}, \texttt{cell\_id FK}, \texttt{report\_date DATE}, \texttt{report\_time TIME},
+  attendance, first\_timers, new\_converts, testimonies TEXT, offerings\_total NUMERIC(12,2),
+  meeting\_type ENUM(prayer\_planning, bible\_study, outreach), status ENUM(submitted, reviewed, approved), notes.
+  \item \textbf{Uniqueness:} \texttt{UNIQUE(tenant\_id, cell\_id, report\_date)}.
+\end{itemize}
+
+\subsection{Finance Domain}
+
+\paragraph{funds}
+\begin{itemize}
+  \item \textbf{Columns:} \texttt{id PK}, \texttt{tenant\_id}, \texttt{name} (e.g., Tithe, Offering, Seed, First Fruit, Partnership),
+  \texttt{is\_partnership BOOL}, \texttt{active BOOL}.
+\end{itemize}
+
+\paragraph{partnership\_arms}
+\begin{itemize}
+  \item \textbf{Columns:} \texttt{id PK}, \texttt{tenant\_id}, \texttt{name} (e.g., Rhapsody of Realities, Healing School, InnerCity Mission, Loveworld TV),
+  \texttt{active\_from DATE}, \texttt{active\_to DATE NULL}, \texttt{active BOOL}.
+\end{itemize}
+
+\paragraph{batches}
+\begin{itemize}
+  \item \textbf{Columns:} \texttt{id PK}, \texttt{tenant\_id}, \texttt{org\_unit\_id FK}, \texttt{service\_id FK NULL}, \texttt{status ENUM(draft, locked)},
+  locked\_by, locked\_at.
+  \item \textbf{Uniqueness:} recommend \texttt{UNIQUE(tenant\_id, org\_unit\_id, service\_id)} when service-linked.
+\end{itemize}
+
+\paragraph{finance\_entries}
+\begin{itemize}
+  \item \textbf{Columns:} \texttt{id PK}, \texttt{tenant\_id}, \texttt{org\_unit\_id FK}, \texttt{batch\_id FK NULL},
+  \texttt{service\_id FK NULL}, \texttt{fund\_id FK}, \texttt{partnership\_arm\_id FK NULL},
+  \texttt{amount NUMERIC(12,2)}, \texttt{currency CHAR(3) DEFAULT 'EUR'},
+  \texttt{method ENUM(cash, kingspay, bank\_transfer, pos, cheque, other)},
+  \texttt{person\_id FK NULL}, \texttt{cell\_id FK NULL}, \texttt{external\_giver\_name TEXT NULL},
+  \texttt{reference TEXT NULL}, \texttt{comment TEXT NULL},
+  \texttt{verified\_status ENUM(draft, verified, reconciled, locked) DEFAULT draft},
+  \texttt{source\_type ENUM(manual, cell\_report)}, \texttt{source\_id UUID NULL}, \texttt{transaction\_date DATE}.
+  \item \textbf{Indexes:} \texttt{(tenant\_id, org\_unit\_id, transaction\_date)}, \texttt{(fund\_id)}, \texttt{(partnership\_arm\_id)}, \texttt{(person\_id)}, \texttt{(cell\_id)}.
+\end{itemize}
+
+\paragraph{partnerships}
+\begin{itemize}
+  \item \textbf{Columns:} \texttt{id PK}, \texttt{tenant\_id}, \texttt{person\_id FK}, \texttt{fund\_id FK}, \texttt{partnership\_arm\_id FK NULL},
+  \texttt{cadence ENUM(weekly, monthly, quarterly, annual)},
+  \texttt{start\_date DATE}, \texttt{end\_date DATE NULL}, \texttt{target\_amount NUMERIC(12,2) NULL}, \texttt{status ENUM(active, paused, ended)}.
+  \item \textbf{Fulfilment:} computed as sum of linked \texttt{finance\_entries} for the person/fund/arm over the cadence window.
+\end{itemize}
+
+\subsection{Audit, Imports, Exports}
+
+\paragraph{audit\_logs}
+\begin{itemize}
+  \item \textbf{Columns:} \texttt{id PK}, \texttt{tenant\_id}, \texttt{actor\_id FK(users)}, \texttt{action TEXT}, \texttt{entity\_type TEXT}, \texttt{entity\_id UUID},
+  \texttt{before JSONB}, \texttt{after JSONB}, \texttt{ip INET}, \texttt{user\_agent TEXT}, \texttt{occurred\_at TIMESTAMPTZ}.
+  \item \textbf{Indexes:} \texttt{(tenant\_id, entity\_type, entity\_id)}, \texttt{(occurred\_at DESC)}.
+\end{itemize}
+
+\paragraph{imports, import\_errors}
+\begin{itemize}
+  \item \textbf{imports:} job tracking with \texttt{status}, \texttt{type}, \texttt{payload JSONB}, \texttt{stats JSONB}.
+  \item \textbf{import\_errors:} \texttt{import\_id FK}, \texttt{row\_number}, \texttt{column}, \texttt{message}.
+\end{itemize}
+
+\paragraph{exports}
+\begin{itemize}
+  \item \textbf{Columns:} job tracking with \texttt{scope JSONB}, \texttt{format}, \texttt{file\_url}, \texttt{created\_by}, \texttt{created\_at}.
+\end{itemize}
+
+\subsection{Lookup \& Enumerations}
+
+\begin{itemize}
+  \item \textbf{payment\_methods:} seed values --- cash, kingspay, bank\_transfer, pos, cheque, other.
+  \item \textbf{meeting\_types:} prayer\_planning, bible\_study, outreach.
+  \item \textbf{service\_names:} Sunday, Midweek, Special (or free text).
+  \item \textbf{verification\_status:} draft, verified, reconciled, locked.
+\end{itemize}
+
+\subsection{Reporting Summaries (for Performance)}
+
+Materialized views / summary tables to back dashboards:
+\begin{itemize}
+  \item \textbf{summary\_attendance\_daily(org\_unit\_id, date, men, women, teens, kids, first\_timers, new\_converts, total)}
+  \item \textbf{summary\_giving\_daily(org\_unit\_id, date, fund\_id, partnership\_arm\_id, method, gross\_amount)}
+  \item \textbf{summary\_cells\_weekly(org\_unit\_id, week, reports\_submitted, avg\_attendance, first\_timers, new\_converts, offerings\_total)}
+  \item \textbf{summary\_members\_status(org\_unit\_id, status, count)}
+\end{itemize}
+\noindent
+These are refreshed on schedule and/or on write via worker jobs.
+
+\subsection{Indexing \& Constraints Guidelines}
+
+\begin{itemize}
+  \item All FK columns indexed: \texttt{org\_unit\_id}, \texttt{service\_id}, \texttt{person\_id}, \texttt{cell\_id}, \texttt{fund\_id}.
+  \item Time-series access paths: composite indexes on \texttt{(tenant\_id, org\_unit\_id, date)} families.
+  \item Uniqueness constraints: one attendance per service; one cell report per (cell, date); batch uniqueness per (church, service) when linked.
+  \item Soft deletes avoided for finance and attendance; use immutable lock state + audit trail instead.
+\end{itemize}
+
+\subsection{Data Lineage for Cell Offerings}
+
+\begin{itemize}
+  \item When a \texttt{cell\_report} with \texttt{offerings\_total} is approved, the worker inserts a \texttt{finance\_entry} with
+  \texttt{source\_type='cell\_report'} and \texttt{source\_id = cell\_report.id}, linked to the cell's church
+  (\texttt{org\_unit\_id}) and \texttt{cell\_id}. This ensures Finance and Reports reflect totals without double entry.
+\end{itemize}
+
+\subsection{RLS Enforcement Note}
+
+All SELECT/INSERT/UPDATE/DELETE policies check:
+\begin{enumerate}
+  \item \texttt{current\_setting('app.tenant\_id') = tenant\_id}
+  \item \textbf{Permission Gate:} \texttt{has\_perm('<domain>.<noun>.<verb>')}
+  \item \textbf{Scope Gate:} \texttt{has\_org\_access(org\_unit\_id)}
+\end{enumerate}
+Sensitive fields (e.g., email, phone) are masked in views unless \texttt{registry.people.read} is present.
+
+\subsection{Notes and Extensions}
+
+\begin{itemize}
+  \item \textbf{Multi-currency:} keep \texttt{currency} on finance entries (default EUR), with future rate tables if needed.
+  \item \textbf{Households:} optionally add \texttt{households} and \texttt{household\_members} if family grouping becomes important.
+  \item \textbf{Search:} consider trigram indexes for names/phones and partial indexes for active records.
+\end{itemize}

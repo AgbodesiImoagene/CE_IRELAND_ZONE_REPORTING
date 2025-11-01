@@ -1,0 +1,196 @@
+\section{System Architecture Overview}
+
+This section describes the architectural design of the Christ Embassy Ireland
+Zone Church Reporting Platform. It defines the overall system topology, core
+modules, data flow, and design principles that ensure scalability, reliability,
+and maintainability.
+
+\subsection{Architecture Summary}
+
+The platform follows a \textbf{modular monolith} architecture, with a unified
+backend serving four specialised web portals:
+
+\begin{itemize}
+    \item \textbf{Registry Portal} --- membership, first-timers, attendance,
+    departments.
+    \item \textbf{Finance Portal} --- offerings, tithes, partnerships,
+    reconciliation.
+    \item \textbf{Cells Portal} --- cell reports, attendance, testimonies,
+    offerings.
+    \item \textbf{Reports Portal} --- dashboards and analytics for all zones,
+    groups, churches, and cells.
+\end{itemize}
+
+Each portal is deployed under its own sub-domain and connects to a single,
+multi-tenant backend via authenticated API endpoints. The architecture supports
+horizontal scaling and future evolution into microservices without significant
+redesign.
+
+\subsection{High-Level Topology}
+
+\begin{verbatim}
+                   +-------------------------------+
+                   |  Christ Embassy Ireland Zone  |
+                   |   Church Reporting Platform   |
+                   +-------------------------------+
+                               |
+                               |
+                     [ Unified Backend API ]
+                               |
+        -------------------------------------------------
+        |                     |                        |
+   registry.zone.ce.church  finance.zone.ce.church  cells.zone.ce.church
+        |                     |                        |
+        -------------------------------------------------
+                               |
+                      reports.zone.ce.church
+\end{verbatim}
+
+\noindent
+Each frontend communicates with the same backend via REST APIs protected by
+role-based authentication. All data is stored in a shared PostgreSQL database
+with strict tenant and scope enforcement.
+
+\subsection{Backend Components}
+
+\paragraph{Technology Stack}
+\begin{itemize}
+    \item \textbf{Framework:} Python \& FastAPI
+    \item \textbf{Database:} PostgreSQL with Row-Level Security (RLS)
+    \item \textbf{Cache / Queue:} Redis
+    \item \textbf{Storage:} S3-compatible object store for exports and receipts
+    \item \textbf{Worker:} Celery or RQ for background jobs (imports, scheduled
+    reports, roll-ups)
+    \item \textbf{Frontend:} Next.js + React with Tailwind CSS and shadcn/ui
+    \item \textbf{Deployment:} Docker containers orchestrated on ECS, Fly.io, or
+    Kubernetes
+\end{itemize}
+
+\paragraph{Backend Modules}
+\begin{enumerate}
+    \item \textbf{Auth \& Users} --- Authentication, 2FA, RBAC, and session
+    management. Hydrates user permissions and scope context into API sessions.
+    \item \textbf{Registry} --- Manages members, first-timers, departments,
+    services, and attendance. One attendance record per service per church.
+    \item \textbf{Finance} --- Handles funds, partnership arms, finance entries,
+    batches, and verification workflows.
+    \item \textbf{Cells} --- Records cells, leadership, meeting reports,
+    testimonies, and offerings (mirrored into Finance for aggregation).
+    \item \textbf{Reports} --- Serves pre-aggregated dashboards and analytics via
+    materialized views and roll-up tables.
+    \item \textbf{Imports/Exports} --- Processes legacy data uploads and report
+    exports asynchronously.
+    \item \textbf{Audit} --- Immutable audit logging and query interface.
+\end{enumerate}
+
+\subsection{Data and Tenancy Model}
+
+\begin{itemize}
+    \item All tables include \texttt{tenant\_id} and \texttt{org\_unit\_id}
+    fields.
+    \item Organisational hierarchy: \texttt{region → zone → group → church →
+    outreach}.
+    \item Cells belong to a specific church and inherit its organisational scope.
+    \item Row-Level Security (RLS) enforces visibility by tenant and assigned
+    organisational scope (self, subtree, or custom set).
+\end{itemize}
+
+\paragraph{Key Tables}
+\begin{itemize}
+    \item \texttt{people}, \texttt{memberships}, \texttt{first\_timers},
+    \texttt{services}, \texttt{attendance}
+    \item \texttt{departments}, \texttt{department\_roles}
+    \item \texttt{funds}, \texttt{partnership\_arms}, \texttt{finance\_entries},
+    \texttt{batches}, \texttt{partnerships}
+    \item \texttt{cells}, \texttt{cell\_reports}
+    \item \texttt{audit\_logs}, \texttt{imports}, \texttt{exports}
+\end{itemize}
+
+\subsection{Data Flows}
+
+\paragraph{Attendance Recording}
+\begin{enumerate}
+    \item Church Administrator records attendance for a \texttt{service\_id} tied to a
+    church and date.
+    \item The worker updates summary tables and dashboards in the Reports
+    module.
+\end{enumerate}
+
+\paragraph{Cell Reports and Offerings}
+\begin{enumerate}
+    \item Cell Leader submits a \texttt{cell\_report} with attendance,
+    first-timers, and offerings.
+    \item The worker mirrors the offerings amount into a linked
+    \texttt{finance\_entry} (source: \texttt{cell\_report}), tagged by
+    \texttt{cell\_id} for consolidated finance reporting.
+\end{enumerate}
+
+\paragraph{Finance Entry and Batch Verification}
+\begin{enumerate}
+    \item Finance Officer records service offerings, tithes, and partnerships.
+    \item When reviewed, a second authorised user locks the batch. Once locked,
+    it becomes immutable and triggers reconciliation updates.
+\end{enumerate}
+
+\paragraph{Data Import}
+\begin{enumerate}
+    \item User uploads a spreadsheet through an import interface.
+    \item Mapping UI validates columns and previews data.
+    \item Import job is queued for processing and audit-tracked.
+\end{enumerate}
+
+\subsection{Reporting Architecture}
+
+\begin{itemize}
+    \item Pre-aggregated summaries are stored in \texttt{summary\_*} tables and
+    materialized views for high-performance dashboards.
+    \item Updates are triggered by event hooks (e.g., new attendance record,
+    verified batch, cell report submission).
+    \item Reports use filters for date range, fund, partnership arm, and
+    organisational scope.
+    \item Aggregations are consistent across hierarchy levels (zone → group →
+    church → cell).
+\end{itemize}
+
+\subsection{Scalability \& Deployment}
+
+\begin{itemize}
+    \item Stateless application containers; scale horizontally by increasing
+    replicas.
+    \item Shared PostgreSQL instance; read replicas for analytics load.
+    \item Redis used for job queue, caching, and rate limiting.
+    \item Static assets and exports served via CDN or object storage.
+    \item Infrastructure defined using Terraform for reproducible deployment.
+\end{itemize}
+
+\subsection{Observability}
+
+\begin{itemize}
+    \item Structured JSON logging with correlation IDs per request.
+    \item Metrics: request latency, queue depth, cache hit ratio, failed logins.
+    \item Alerting for downtime, slow queries, job failures, and high error
+    rates.
+    \item Dashboards for uptime, throughput, and data integrity monitoring.
+\end{itemize}
+
+\subsection{Evolution Path}
+
+The architecture is designed to evolve gracefully:
+\begin{itemize}
+    \item Reports may be separated into a dedicated analytics service backed by a
+    read-replica or OLAP database (e.g., ClickHouse or BigQuery).
+    \item An event bus (e.g., Redis Streams or NATS) can be introduced to manage
+    asynchronous updates between Registry, Finance, and Reports modules.
+    \item A federated search engine (e.g., OpenSearch) may be added for member
+    and transaction lookup if performance requires.
+\end{itemize}
+
+\subsection{Key Design Decisions}
+\begin{itemize}
+    \item Modular monolith selected for simplicity, lower cost, and easier
+    maintainability.
+    \item Data aggregation through materialized views for near real-time reports.
+    \item Unified access control model across all portals for consistent
+    permissions enforcement.
+    \item Event-driven updates between modules to maintain data consistency.
+\end{itemize}

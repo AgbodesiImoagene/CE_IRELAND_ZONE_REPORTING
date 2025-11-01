@@ -1,0 +1,83 @@
+\appendix
+\section{Appendices}
+
+\subsection{A. Glossary of Terms}
+
+\begin{longtable}{p{3.5cm}p{10cm}}
+\textbf{Term} & \textbf{Definition} \\ \hline
+\textbf{Zone} & A major administrative division within Christ Embassy comprising multiple groups and churches. \\
+\textbf{Group} & A cluster of churches within a zone supervised by a Group Pastor. \\
+\textbf{Church} & A local assembly or parish within a group. \\
+\textbf{Outreach} & A smaller church unit or fellowship group connected to a parent church. \\
+\textbf{Cell} & The smallest fellowship unit within the ministry, typically meeting weekly in homes or venues. \\
+\textbf{Service} & A worship gathering (e.g., Sunday or Midweek service). \\
+\textbf{First-timer} & A visitor attending a service for the first time. \\
+\textbf{Partner} & A member committed to regular financial support through a specific partnership arm. \\
+\textbf{Batch} & A collection of financial entries recorded for a given service or period before verification. \\
+\textbf{Verified Batch} & A batch reviewed and locked by authorised finance personnel. \\
+\textbf{Foundation School} & A series of classes introducing new converts to the ministry’s core teachings. \\
+\textbf{Tenant} & Logical boundary representing a zone within the system’s multi-tenant database. \\
+\textbf{RLS} & Row-Level Security, used to enforce data access restrictions by organisation scope. \\
+\textbf{PII} & Personally Identifiable Information such as name, email, phone number, or address. \\
+\textbf{Dashboard} & A visual interface showing KPIs and trends from aggregated data. \\
+\textbf{Dual Control} & Security process requiring two authorised users to approve a financial lock action. \\
+\textbf{Cell Report} & A weekly submission detailing attendance, new converts, and offerings from a cell meeting. \\
+\textbf{KingsPay} & Christ Embassy’s internal electronic giving platform, referenced for record-keeping only. \\
+\end{longtable}
+
+\subsection{B. Enumerations and Lookup Tables}
+
+\begin{longtable}{p{4cm}p{9cm}}
+\textbf{Enumeration} & \textbf{Allowed Values / Description} \\ \hline
+\textbf{Service Type} & Sunday, Midweek, Special \\
+\textbf{Meeting Type} & Prayer and Planning, Bible Study, Outreach \\
+\textbf{Payment Method} & Cash, KingsPay, Bank Transfer, POS, Cheque, Other \\
+\textbf{Verification Status} & Draft, Verified, Reconciled, Locked \\
+\textbf{Cell Report Status} & Submitted, Reviewed, Approved \\
+\textbf{First-timer Status} & New, Contacted, Returned, Member \\
+\textbf{Partnership Cadence} & Weekly, Monthly, Quarterly, Annual \\
+\textbf{Org Unit Type} & Region, Zone, Group, Church, Outreach \\
+\textbf{User Role Template} & Zonal Pastor, Group Pastor, Church Pastor, Finance Officer, Church Administrator, Cell Leader, Reports Viewer \\
+\end{longtable}
+
+\subsection{C. Example Import Template Fields}
+
+\paragraph{Membership Import}
+\begin{itemize}
+    \item Full Name, Gender, Date of Birth, Email, Phone
+    \item Address, County, Town, Postcode
+    \item Date Joined, Foundation School Completed, Baptism Date
+    \item Marital Status, Department, Cell
+\end{itemize}
+
+\paragraph{Finance Import}
+\begin{itemize}
+    \item Transaction Date, Fund Type, Partnership Arm, Amount
+    \item Payment Method, Giver Name or Member Code
+    \item Service Date, Batch Reference, Comment
+\end{itemize}
+
+\paragraph{Cell Report Import}
+\begin{itemize}
+    \item Cell Name, Meeting Date, Time, Attendance, First-timers, New Converts, Offerings Total, Meeting Type
+\end{itemize}
+
+\subsection{D. Key Performance Indicator Reference}
+
+\begin{longtable}{p{5cm}p{8cm}}
+\textbf{KPI} & \textbf{Definition / Calculation} \\ \hline
+Membership Growth Rate & \(\frac{\text{New Members in Period}}{\text{Members at Start of Period}} \times 100\%\) \\
+Attendance Growth Rate & \(\frac{\text{Current Attendance} - \text{Previous Attendance}}{\text{Previous Attendance}} \times 100\%\) \\
+First-Timer Retention & \(\frac{\text{First-timers who Returned}}{\text{Total First-timers}} \times 100\%\) \\
+Partnership Fulfilment & \(\frac{\text{Total Given}}{\text{Pledged Amount}} \times 100\%\) \\
+Per-Capita Giving & \(\frac{\text{Total Giving}}{\text{Average Attendance}}\) \\
+Cell Compliance Rate & \(\frac{\text{Reports Submitted}}{\text{Expected Reports}} \times 100\%\) \\
+Verified Finance Ratio & \(\frac{\text{Verified Entries}}{\text{Total Finance Entries}}\times100\%\) \\
+\end{longtable}
+
+\subsection{E. Reference Links (External)}
+\begin{itemize}
+    \item Christ Embassy Official Website: \url{https://www.christembassy.org}
+    \item Loveworld Inc. Partnership Arms Overview: \url{https://loveworldinc.org/partnership-arms}
+    \item Data Protection Guidelines (Ireland): \url{https://www.dataprotection.ie}
+\end{itemize}

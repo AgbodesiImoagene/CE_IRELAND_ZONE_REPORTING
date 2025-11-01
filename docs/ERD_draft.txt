@@ -1,0 +1,81 @@
++------------------+       +------------------+       +------------------+
+| org_units        |       | users            |       | roles            |
+|------------------|       |------------------|       |------------------|
+| id (PK)          |<----->| id (PK)          |       | id (PK)          |
+| name             |       | name             |       | name             |
+| type             |       | email            |       | ...              |
+| parent_id (FK)   |       | ...              |       +------------------+
++------------------+       +------------------+
+                                ^
+                                |
+                  +------------------------------+
+                  | org_assignments              |
+                  |------------------------------|
+                  | id (PK)                      |
+                  | user_id (FK)                 |
+                  | org_unit_id (FK)             |
+                  | role_id (FK)                 |
+                  | scope_type {self,subtree}    |
+                  +------------------------------+
+
++------------------+       +------------------+       +------------------+
+| people           |       | memberships      |       | departments      |
+|------------------|       |------------------|       |------------------|
+| id (PK)          |<----->| person_id (FK)   |       | id (PK)          |
+| first_name       |       | status           |<----->| name             |
+| last_name        |       | join_date        |       +------------------+
+| dob              |       | foundation_done  |
+| gender           |       | baptism_date     |       +------------------+
+| email, phone     |       +------------------+       | department_roles |
+| address, town    |                                  |------------------|
+| county, eircode  |                                  | id (PK)          |
+| marital_status   |                                  | dept_id (FK)     |
+| consent_flags    |                                  | person_id (FK)   |
++------------------+                                  | role {leader,..} |
+                                                      +------------------+
+
++------------------+       +------------------+       +------------------+
+| services         |       | attendance       |       | first_timers     |
+|------------------|       |------------------|       |------------------|
+| id (PK)          |<----->| service_id (FK)  |       | id (PK)          |
+| org_unit_id (FK) |       | men_count        |       | person_id (FK)   |
+| name             |       | women_count      |       | service_id (FK)  |
+| date, time       |       | teens_count      |       | source, notes    |
++------------------+       | kids_count       |       +------------------+
+                           | total            |
+                           | first_timers     |
+                           | new_converts     |
+                           | notes            |
+                           +------------------+
+
++------------------+       +------------------+       +------------------+
+| funds            |       | finance_entries  |       | partnerships     |
+|------------------|       |------------------|       |------------------|
+| id (PK)          |       | id (PK)          |       | id (PK)          |
+| name             |       | org_unit_id (FK) |       | person_id (FK)   |
+| type (tithe,..)  |       | service_id (FK)  |       | fund_id (FK)     |
++------------------+       | person_id (FK)   |       | amount, cadence  |
+                           | cell_id (FK)     |       | start_date, end  |
+                           | fund_id (FK)     |       | status           |
+                           | amount           |       +------------------+
+                           | method           |
+                           | ref, comment     |
+                           | verified_status  |
+                           | date             |
+                           +------------------+
+
++------------------+       +------------------+
+| cells            |       | cell_reports     |
+|------------------|       |------------------|
+| id (PK)          |<----->| id (PK)          |
+| org_unit_id (FK) |       | cell_id (FK)     |
+| name             |       | date, time       |
+| leader_id (FK)   |       | attendance       |
+| venue            |       | first_timers     |
+| status           |       | new_converts     |
++------------------+       | offerings_total  |
+                           | meeting_type     |
+                           | testimonies      |
+                           | followups_flag   |
+                           | notes            |
+                           +------------------+

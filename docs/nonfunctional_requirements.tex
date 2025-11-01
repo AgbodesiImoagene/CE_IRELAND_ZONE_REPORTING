@@ -1,0 +1,134 @@
+\section{Non-Functional Requirements}
+
+This section defines the non-functional requirements (NFRs) that govern the
+quality attributes of the Christ Embassy Ireland Zone Church Reporting Platform.
+These requirements ensure that the system operates securely, reliably, and
+efficiently across all sub-domains and user roles.
+
+\subsection{Security}
+
+\begin{itemize}
+    \item \textbf{NFR-S1} — All user authentication and session management shall
+    follow industry-standard security practices using HTTPS, salted password
+    hashing (Argon2 or bcrypt), and optional Single Sign-On (SSO) for pastors.
+    \item \textbf{NFR-S2} — Role-Based Access Control (RBAC) and organisational
+    scopes shall be enforced both at the API layer and the database layer via
+    Row-Level Security (RLS).
+    \item \textbf{NFR-S3} — All data in transit shall be encrypted using TLS
+    1.2 or higher; data at rest shall be encrypted using AES-256 or equivalent.
+    \item \textbf{NFR-S4} — Multi-factor authentication (2FA) shall be required
+    for pastors, finance officers, and users with elevated permissions.
+    \item \textbf{NFR-S5} — The platform shall maintain immutable audit logs for
+    all sensitive actions including data exports, deletions, financial
+    verifications, and role assignments.
+    \item \textbf{NFR-S6} — Session timeouts shall occur after 30 minutes of
+    inactivity or 12 hours of continuous login, whichever comes first.
+    \item \textbf{NFR-S7} — Password reset tokens shall expire within 15 minutes
+    and be single-use.
+\end{itemize}
+
+\subsection{Privacy \& Compliance}
+
+\begin{itemize}
+    \item \textbf{NFR-P1} — The system shall comply with the General Data
+    Protection Regulation (GDPR) as applicable in Ireland and the EU.
+    \item \textbf{NFR-P2} — All personally identifiable information (PII) shall
+    be encrypted at rest and masked where not essential to a user’s role.
+    \item \textbf{NFR-P3} — Consent for storing contact information and
+    follow-up communication shall be explicitly captured during registration.
+    \item \textbf{NFR-P4} — Users with \texttt{system.exports.full\_pii} must
+    complete step-up 2FA confirmation before export.
+    \item \textbf{NFR-P5} — Members shall have the right to request data
+    correction or deletion, subject to church policy and record-keeping
+    obligations.
+    \item \textbf{NFR-P6} — Data retention periods shall be configurable, with a
+    default of 7 years for audit and financial records.
+\end{itemize}
+
+\subsection{Reliability \& Availability}
+
+\begin{itemize}
+    \item \textbf{NFR-R1} — The system shall achieve a minimum of 99.9\%
+    uptime, excluding scheduled maintenance.
+    \item \textbf{NFR-R2} — The platform shall degrade gracefully in the event
+    of partial component failure (e.g., temporary loss of reporting service
+    shall not affect data entry in Registry or Finance portals).
+    \item \textbf{NFR-R3} — All user operations shall be idempotent where
+    applicable (e.g., duplicate uploads or repeated submissions shall not
+    produce duplicate records).
+    \item \textbf{NFR-R4} — The system shall perform daily backups of the
+    database and retain rolling backups for a minimum of 30 days.
+    \item \textbf{NFR-R5} — Backups shall be encrypted and stored in geographically
+    redundant locations.
+    \item \textbf{NFR-R6} — Recovery Point Objective (RPO): 1 hour; Recovery Time
+    Objective (RTO): 2 hours.
+    \item \textbf{NFR-R7} — A backup restore test shall be successfully executed
+    at least once per quarter.
+\end{itemize}
+
+\subsection{Performance \& Scalability}
+
+\begin{itemize}
+    \item \textbf{NFR-PS1} — API response times shall not exceed 300 ms for
+    95\% of requests under normal load (P95 latency).
+    \item \textbf{NFR-PS2} — The system shall support at least 1,000 concurrent
+    active users within a single zone tenant.
+    \item \textbf{NFR-PS3} — Data queries and reports shall use indexed
+    aggregations to return results within 2 seconds for standard filters.
+    \item \textbf{NFR-PS4} — The system shall scale horizontally via container
+    replication (Docker/Kubernetes) and vertically via resource provisioning.
+    \item \textbf{NFR-PS5} — Background jobs such as imports, exports, and
+    scheduled report generation shall be handled asynchronously via a job queue
+    (e.g., Celery or RQ) to avoid blocking requests.
+    \item \textbf{NFR-PS6} — File uploads and large exports shall use presigned
+    URLs or streamed downloads to optimise throughput.
+\end{itemize}
+
+\subsection{Maintainability \& Extensibility}
+
+\begin{itemize}
+    \item \textbf{NFR-M1} — The codebase shall follow a modular architecture,
+    separating backend services, shared components, and frontend portals.
+    \item \textbf{NFR-M2} — The backend shall expose a documented REST API with
+    OpenAPI/Swagger specification.
+    \item \textbf{NFR-M3} — All configuration values (e.g., database URIs, email
+    credentials) shall be injected via environment variables or secure
+    parameter storage.
+    \item \textbf{NFR-M4} — New portals or modules (e.g., Events, Outreach) can
+    be added without modifying existing schemas or permissions, using the same
+    tenant-based architecture.
+    \item \textbf{NFR-M5} — Automated testing (unit, integration, and API-level)
+    shall be maintained with a minimum 80\% coverage target.
+    \item \textbf{NFR-M6} — Continuous Integration/Deployment (CI/CD) shall be
+    implemented with code linting, schema migrations, and automated rollback.
+    \item \textbf{NFR-M7} — All dependencies shall be pinned to versions and
+    checked for security vulnerabilities regularly.
+\end{itemize}
+
+\subsection{Usability \& Accessibility}
+
+\begin{itemize}
+    \item \textbf{NFR-U1} — All portals shall be responsive and usable on
+    desktop, tablet, and mobile screens.
+    \item \textbf{NFR-U2} — Interfaces shall use clear typography and layout with
+    consistent navigation across portals.
+    \item \textbf{NFR-U3} — Data-entry forms shall include validation feedback
+    and contextual error messages.
+    \item \textbf{NFR-U4} — Colour contrast and text size shall meet WCAG 2.1 AA
+    accessibility guidelines.
+    \item \textbf{NFR-U5} — The system shall provide user feedback for all
+    asynchronous operations (e.g., import progress, batch locking).
+\end{itemize}
+
+\subsection{Monitoring \& Observability}
+
+\begin{itemize}
+    \item \textbf{NFR-O1} — Application logs shall be structured (JSON) and
+    centralised for analysis.
+    \item \textbf{NFR-O2} — Metrics such as API latency, job queue depth, and
+    failed logins shall be captured and visualised on dashboards.
+    \item \textbf{NFR-O3} — Alerts shall be configured for availability,
+    performance degradation, and authentication anomalies.
+    \item \textbf{NFR-O4} — Audit and monitoring data shall be retained for at
+    least 12 months.
+\end{itemize}

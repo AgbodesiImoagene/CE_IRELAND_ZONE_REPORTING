@@ -1,0 +1,161 @@
+\section{KPIs and Success Metrics}
+
+This section defines the Key Performance Indicators (KPIs) and success metrics
+for the Christ Embassy Ireland Zone Church Reporting Platform. These metrics
+will guide ongoing performance monitoring and confirm whether the system
+achieves its intended operational and technical objectives.
+
+\subsection{Overview}
+
+KPIs are grouped into four primary domains aligned with the platform’s portals:
+\textbf{Registry}, \textbf{Finance}, \textbf{Cells}, and \textbf{Reports}.
+Additionally, cross-cutting technical KPIs measure data integrity, uptime, and
+user engagement.
+
+\subsection{Registry KPIs}
+
+\begin{itemize}
+    \item \textbf{KPI-R1: Membership Data Completeness} --- percentage of member
+    records with all required demographic and contact fields completed.  
+    \emph{Target:} $\geq$ 95\%.
+
+    \item \textbf{KPI-R2: Duplicate Records Rate} --- percentage of duplicate or
+    merged records over total members.  
+    \emph{Target:} $\leq$ 2\%.
+
+    \item \textbf{KPI-R3: First-Timer Registration Timeliness} --- proportion of
+    first-timer entries captured within 24 hours of service attendance.  
+    \emph{Target:} $\geq$ 90\%.
+
+    \item \textbf{KPI-R4: First-Timer Assimilation Rate} --- percentage of
+    first-timers who transition to full membership within 60 days.  
+    \emph{Target:} $\geq$ 70\%.
+
+    \item \textbf{KPI-R5: Attendance Reporting Compliance} --- proportion of
+    scheduled services with attendance data recorded and approved.  
+    \emph{Target:} 100\%.
+
+    \item \textbf{KPI-R6: Foundation School Completion Rate} --- percentage of
+    members who complete foundation school within one year of joining.  
+    \emph{Target:} $\geq$ 80\%.
+
+    \item \textbf{KPI-R7: Baptism Tracking Rate} --- proportion of baptized
+    members with corresponding date recorded in the system.  
+    \emph{Target:} 100\%.
+\end{itemize}
+
+\subsection{Finance KPIs}
+
+\begin{itemize}
+    \item \textbf{KPI-F1: Data Entry Timeliness} --- percentage of service
+    offerings entered within 48 hours of collection.  
+    \emph{Target:} $\geq$ 95\%.
+
+    \item \textbf{KPI-F2: Verification Timeliness} --- percentage of batches
+    verified and locked within one week of entry.  
+    \emph{Target:} $\geq$ 95\%.
+
+    \item \textbf{KPI-F3: Reconciliation Accuracy} --- difference between total
+    logged offerings and verified deposits per reporting period.  
+    \emph{Target:} $\leq$ 1\% variance.
+
+    \item \textbf{KPI-F4: Partnership Fulfilment Rate} --- proportion of active
+    partners meeting or exceeding their pledged amounts.  
+    \emph{Target:} $\geq$ 85\%.
+
+    \item \textbf{KPI-F5: Fund Mix Visibility} --- availability of clear fund
+    distribution reports (tithes, offerings, partnerships, first fruits).  
+    \emph{Target:} 100\% availability.
+
+    \item \textbf{KPI-F6: Cell Offering Reconciliation Rate} --- proportion of
+    cell-reported offerings successfully reflected in finance summaries.  
+    \emph{Target:} $\geq$ 95\%.
+\end{itemize}
+
+\subsection{Cells KPIs}
+
+\begin{itemize}
+    \item \textbf{KPI-C1: Reporting Compliance} --- percentage of active cells
+    that submit at least one report per week.  
+    \emph{Target:} $\geq$ 95\%.
+
+    \item \textbf{KPI-C2: Attendance Accuracy} --- variance between average cell
+    attendance and verified church service attendance ratios.  
+    \emph{Target:} $\leq$ 10\%.
+
+    \item \textbf{KPI-C3: Outreach Effectiveness} --- number of first-timers and
+    new converts reported per 100 active members.  
+    \emph{Target:} growth trend $\geq$ +10\% quarter-over-quarter.
+
+    \item \textbf{KPI-C4: Testimony Capture Rate} --- proportion of cell reports
+    containing at least one recorded testimony.  
+    \emph{Target:} $\geq$ 50\%.
+
+    \item \textbf{KPI-C5: Leader Submission Timeliness} --- percentage of cell
+    reports submitted within 24 hours of meeting.  
+    \emph{Target:} $\geq$ 90\%.
+\end{itemize}
+
+\subsection{Reports \& Oversight KPIs}
+
+\begin{itemize}
+    \item \textbf{KPI-P1: Dashboard Availability} --- uptime of the reports
+    portal and dashboard services.  
+    \emph{Target:} 99.9\%.
+
+    \item \textbf{KPI-P2: Report Generation Speed} --- average generation time
+    for standard dashboards and exports.  
+    \emph{Target:} $\leq$ 2 seconds for dashboards, $\leq$ 10 seconds for exports.
+
+    \item \textbf{KPI-P3: Hierarchical Accuracy} --- correctness of aggregated
+    metrics when drilling down from zone to church level.  
+    \emph{Target:} 100\% consistency.
+
+    \item \textbf{KPI-P4: Data Refresh Latency} --- delay between entry or
+    update in sub-portals and reflection in dashboards.  
+    \emph{Target:} $\leq$ 5 minutes.
+
+    \item \textbf{KPI-P5: Scheduled Report Reliability} --- success rate of
+    automated scheduled report deliveries.  
+    \emph{Target:} $\geq$ 99\%.
+\end{itemize}
+
+\subsection{Cross-Domain Technical KPIs}
+
+\begin{itemize}
+    \item \textbf{KPI-T1: System Uptime} --- total platform uptime excluding
+    maintenance windows.  
+    \emph{Target:} 99.9\%.
+
+    \item \textbf{KPI-T2: API Latency} --- median and 95th percentile latency of
+    API endpoints under nominal load.  
+    \emph{Target:} P95 $\leq$ 300 ms.
+
+    \item \textbf{KPI-T3: Error Rate} --- percentage of failed API requests
+    (5xx or unhandled 4xx) over total requests.  
+    \emph{Target:} $\leq$ 0.5\%.
+
+    \item \textbf{KPI-T4: Data Integrity Score} --- proportion of records
+    passing consistency checks and referential integrity validation.  
+    \emph{Target:} $\geq$ 99.5\%.
+
+    \item \textbf{KPI-T5: Backup Validation Success} --- successful restore
+    verification rate per quarter.  
+    \emph{Target:} 100\%.
+
+    \item \textbf{KPI-T6: Audit Log Coverage} --- proportion of sensitive
+    actions successfully captured in audit logs.  
+    \emph{Target:} 100\%.
+\end{itemize}
+
+\subsection{Measurement \& Monitoring}
+
+\begin{itemize}
+    \item KPI metrics shall be automatically collected and displayed in the
+    administrative reporting dashboard for zone leadership and technical staff.
+    \item Historical KPI data shall be stored for at least 12 months for trend
+    analysis.
+    \item Alerts shall be configured for threshold breaches (e.g., missing
+    service reports, delayed batch verification).
+    \item KPI data shall also be exportable in CSV format for external analysis.
+\end{itemize}

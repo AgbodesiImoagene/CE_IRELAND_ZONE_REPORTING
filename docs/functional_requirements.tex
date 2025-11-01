@@ -1,0 +1,190 @@
+\section{Functional Requirements}
+
+This section defines the functional requirements for the Christ Embassy Ireland Zone
+Church Reporting Platform. Requirements are grouped by portal (Registry,
+Finance, Cells, Reports) and describe system behaviour, data relationships, and
+user interactions. Each requirement is uniquely identified for reference.
+
+\subsection{Registry Portal (\texttt{registry.<zone>.ce.church})}
+
+\paragraph{Purpose}
+Provides authorised church administrators with facilities to manage member
+records, first-timers, service attendance, and departmental assignments.
+
+\paragraph{Core Entities}
+\begin{itemize}
+    \item \textbf{Member (Person):} uniquely identified individual with
+    demographic and contact details, membership status, and church affiliation.
+    \item \textbf{First Timer:} a visitor who attended for the first time and may
+    later be linked to a Member record.
+    \item \textbf{Service Attendance:} a record of attendance counts for a
+    specific service date and church.
+    \item \textbf{Department:} organisational unit within a church with members
+    and leaders.
+\end{itemize}
+
+\paragraph{Requirements}
+\begin{itemize}
+    \item \textbf{FR-R1} — The system shall allow Church Administrators and authorised
+    pastors to create, edit, and search Member records containing:
+    name, aliases, gender, date of birth, contact information, address, town,
+    county, Eircode, marital status, foundation school completion, baptism date,
+    membership status, and associated cell.
+    \item \textbf{FR-R2} — The system shall validate mandatory fields (first
+    name, last name, gender, contact number or email, and assigned church).
+    \item \textbf{FR-R3} — Each Member record shall have a unique internal
+    identifier and audit trail of changes.
+    \item \textbf{FR-R4} — Church Administrators shall be able to register first-timers
+    and associate them with the service they attended, capturing name, contact,
+    inviter/source, and notes.
+    \item \textbf{FR-R5} — The system shall maintain a pipeline of first-timers
+    with statuses: New → Contacted → Returned → Member.
+    \item \textbf{FR-R6} — The system shall store attendance summaries for each
+    service, including men, women, teens, kids, total attendance, first timers,
+    new converts, and notes. Each attendance entry is linked to a Service object
+    (\texttt{service\_id}) identifying the date, time, and church.
+    \item \textbf{FR-R7} — The system shall provide validation to ensure only one
+    attendance record per service per church.
+    \item \textbf{FR-R8} — Departmental assignments shall link Members to one or
+    more departments and optionally mark a leader.
+    \item \textbf{FR-R9} — Registry users shall be able to export membership or
+    attendance data as CSV/Excel, limited by their scope.
+    \item \textbf{FR-R10} — All Registry actions (create, update, delete, merge)
+    shall be recorded in the audit log.
+\end{itemize}
+
+\subsection{Finance Portal (\texttt{finance.<zone>.ce.church})}
+
+\paragraph{Purpose}
+Captures and verifies records of all forms of monetary giving for accounting and
+reporting purposes. The system does \emph{not} process payments but maintains a
+structured record of financial transactions and partnerships.
+
+\paragraph{Core Entities}
+\begin{itemize}
+    \item \textbf{Fund:} category of giving (tithe, offering, seed, first fruit,
+    partnership, etc.).
+    \item \textbf{Partnership Arm:} specific ministry initiative such as
+    Rhapsody of Realities, The Healing School, InnerCity Mission for Children,
+    Loveworld Television Ministry, or any custom campaign.
+    \item \textbf{Finance Entry:} individual record of a contribution linked to
+    a member, cell, or external giver.
+    \item \textbf{Batch:} collection of finance entries for a service; may be
+    locked and verified.
+\end{itemize}
+
+\paragraph{Requirements}
+\begin{itemize}
+    \item \textbf{FR-F1} — Finance Officers shall be able to record new finance
+    entries with: transaction date, amount, fund, partnership arm, payment
+    method (cash, KingsPay, bank transfer, cheque, POS, other), reference,
+    member/cell linkage, and comment.
+    \item \textbf{FR-F2} — Each finance entry shall reference the associated
+    service where applicable (\texttt{service\_id}).
+    \item \textbf{FR-F3} — The system shall permit association of entries to
+    either a Member (\texttt{person\_id}), a Cell (\texttt{cell\_id}), or an
+    external entity (text name).
+    \item \textbf{FR-F4} — Entries shall include a \texttt{verified\_status}
+    field with states: Draft → Verified → Reconciled → Locked.
+    \item \textbf{FR-F5} — Each batch shall be uniquely identified by
+    \texttt{(church, service\_date, service\_name)} and can be locked only after
+    dual approval.
+    \item \textbf{FR-F6} — Locked batches are immutable; unlock requires dual
+    authorisation and is fully audited.
+    \item \textbf{FR-F7} — The system shall allow recording of partnerships with
+    amount, start date, frequency (weekly, monthly, quarterly, annual), and
+    fulfilment percentage.
+    \item \textbf{FR-F8} — Finance users shall be able to generate summaries per
+    fund, partnership arm, church, or service.
+    \item \textbf{FR-F9} — All finance data exports must include generation
+    timestamp, scope, and user metadata.
+    \item \textbf{FR-F10} — Only authorised users can edit or delete verified
+    entries, and all such actions require justification text.
+\end{itemize}
+
+\subsection{Cells Portal (\texttt{cells.<zone>.ce.church})}
+
+\paragraph{Purpose}
+Allows Cell Leaders to submit weekly cell reports and track their own cell
+activities, while allowing pastors to monitor participation and outreach.
+
+\paragraph{Core Entities}
+\begin{itemize}
+    \item \textbf{Cell:} a small fellowship group linked to a church with leader,
+    assistant, meeting day, time, and venue.
+    \item \textbf{Cell Report:} a weekly or ad-hoc meeting report containing
+    attendance counts, first timers, new converts, testimonies, offerings, and
+    meeting type.
+\end{itemize}
+
+\paragraph{Requirements}
+\begin{itemize}
+    \item \textbf{FR-C1} — Cell Leaders shall be able to submit cell reports for
+    their assigned cell only.
+    \item \textbf{FR-C2} — Each cell report shall include date, time, meeting
+    type, attendance, first timers, new converts, testimonies, and offerings
+    total.
+    \item \textbf{FR-C3} — Each cell report shall automatically reference its
+    parent cell (\texttt{cell\_id}) and the church through that cell’s
+    \texttt{org\_unit\_id}.
+    \item \textbf{FR-C4} — The system shall validate that only one report per
+    cell per date can be submitted.
+    \item \textbf{FR-C5} — Cell offerings shall be automatically included in the
+    Finance reports under the corresponding fund when applicable.
+    \item \textbf{FR-C6} — Pastors may view submission status and overdue
+    reports across cells they oversee.
+    \item \textbf{FR-C7} — The system shall support optional approval workflow
+    for cell reports (submitted → reviewed → approved).
+\end{itemize}
+
+\subsection{Reports Portal (\texttt{reports.<zone>.ce.church})}
+
+\paragraph{Purpose}
+Provides zonal, group, and local pastors with dashboards and drill-down reports
+spanning membership, finance, attendance, and cell activities.
+
+\paragraph{Requirements}
+\begin{itemize}
+    \item \textbf{FR-P1} — The system shall display KPIs and charts based on the
+    user’s scope:
+    \begin{itemize}
+        \item Attendance trends (weekly, monthly, demographic splits)
+        \item First-timer assimilation funnel
+        \item Foundation school and baptism progress
+        \item Department participation rate
+        \item Giving trends by fund and partnership arm
+        \item Per-capita giving (total giving / average attendance)
+        \item Cell reporting compliance and outreach outcomes
+    \end{itemize}
+    \item \textbf{FR-P2} — Dashboards shall provide drill-down from zone → group
+    → church → cell → individual.
+    \item \textbf{FR-P3} — Reports shall support filters by date range, fund,
+    church, cell, and member status.
+    \item \textbf{FR-P4} — Reports shall be exportable as CSV, Excel, or PDF.
+    \item \textbf{FR-P5} — Users with appropriate permissions may schedule
+    recurring email reports.
+\end{itemize}
+
+\subsection{Data Import \& Migration}
+
+\paragraph{FR-I1} The system shall support import of legacy spreadsheets
+(Members, Services, Attendance, Finance, Cells, Cell Reports) through a guided
+mapping interface with preview and validation.
+
+\paragraph{FR-I2} Validation errors shall be reported with line numbers and
+descriptions. Users may download a corrected template for re-upload.
+
+\paragraph{FR-I3} Imports shall be performed per portal according to role
+permissions; only Zonal or Group Pastors can perform zone-wide imports.
+
+\subsection{Audit \& Logging Integration}
+
+\paragraph{FR-A1} All create, update, delete, merge, lock/unlock, verify, and
+export actions shall be written to an immutable audit log with timestamp, actor,
+entity type, entity id, and IP address.
+
+\paragraph{FR-A2} System shall expose audit entries to users with
+\texttt{system.audit.view} permission filtered by their scope.
+
+\paragraph{FR-A3} Audit logs shall be retained for a minimum of seven years and
+included in backups.

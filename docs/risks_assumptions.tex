@@ -1,0 +1,181 @@
+\section{Risks and Assumptions}
+
+This section identifies the major risks, dependencies, and underlying
+assumptions associated with the Christ Embassy Ireland Zone Church Reporting
+Platform. Each risk includes an impact assessment and mitigation strategy.
+
+\subsection{Project Assumptions}
+
+\begin{enumerate}
+    \item The system will initially be deployed for the \textbf{Ireland Zone}
+    and may later be replicated for other zones.
+    \item All participating churches, groups, and cells will maintain stable
+    internet access sufficient for web-based data entry.
+    \item Existing spreadsheets and records are sufficiently structured to
+    support automated import after field mapping and validation.
+    \item The zone has designated personnel for each portal:
+    Church Administrators, Finance Officers, Cell Leaders, and Report Viewers.
+    \item All users will undergo basic onboarding and training before launch.
+    \item Zone leadership will define approved organisational hierarchies and
+    naming conventions prior to data migration.
+    \item Financial records are entered manually for reporting; no real payment
+    processing is performed on the platform.
+    \item Access control will follow the hierarchical structure
+    (Zonal → Group → Church → Cell) without exceptions.
+    \item A central technical administrator or IT officer will manage backups,
+    infrastructure, and access provisioning at the zone level.
+\end{enumerate}
+
+\subsection{Project Risks and Mitigation Strategies}
+
+\paragraph{1. Data Quality Risk}
+\begin{itemize}
+    \item \textbf{Description:} Legacy spreadsheets may contain inconsistent or
+    incomplete data.
+    \item \textbf{Impact:} Duplicate or invalid records could distort reporting
+    accuracy.
+    \item \textbf{Mitigation:} Implement pre-import validation, deduplication
+    tools, and review dashboards for anomalies.
+\end{itemize}
+
+\paragraph{2. User Adoption Risk}
+\begin{itemize}
+    \item \textbf{Description:} Transitioning from manual processes to a digital
+    system may face initial resistance from some users.
+    \item \textbf{Impact:} Incomplete reporting or low data entry compliance.
+    \item \textbf{Mitigation:} Provide short training sessions, in-portal help,
+    and simplified mobile access for clerks and cell leaders.
+\end{itemize}
+
+\paragraph{3. Connectivity Risk}
+\begin{itemize}
+    \item \textbf{Description:} Some outreaches or churches may experience poor
+    network connectivity.
+    \item \textbf{Impact:} Delayed data entry or missed attendance submissions.
+    \item \textbf{Mitigation:} Support offline entry templates or lightweight
+    mobile interfaces that sync when connectivity is restored.
+\end{itemize}
+
+\paragraph{4. Access Control Misconfiguration}
+\begin{itemize}
+    \item \textbf{Description:} Incorrect assignment of scopes or roles may
+    expose data beyond intended boundaries.
+    \item \textbf{Impact:} Breach of data privacy or loss of trust in system
+    security.
+    \item \textbf{Mitigation:} Use guided user provisioning wizards, predefined
+    role templates, and periodic permission audits.
+\end{itemize}
+
+\paragraph{5. Financial Data Entry Errors}
+\begin{itemize}
+    \item \textbf{Description:} Manual entry of offerings or partnerships may
+    introduce typos or misallocations.
+    \item \textbf{Impact:} Reporting inaccuracies or reconciliation variance.
+    \item \textbf{Mitigation:} Dual control for batch locking, field-level
+    validation (numeric ranges, required fund), and audit trails.
+\end{itemize}
+
+\paragraph{6. Delayed Report Generation}
+\begin{itemize}
+    \item \textbf{Description:} Large reports may take long to generate during
+    peak hours.
+    \item \textbf{Impact:} Poor user experience and delayed insights for pastors.
+    \item \textbf{Mitigation:} Use pre-aggregated summary tables, background job
+    queues, and read replicas for analytics.
+\end{itemize}
+
+\paragraph{7. Data Loss or Corruption}
+\begin{itemize}
+    \item \textbf{Description:} Accidental deletion, database error, or hardware
+    failure could compromise stored data.
+    \item \textbf{Impact:} High; loss of financial or membership records.
+    \item \textbf{Mitigation:} Daily encrypted backups, multi-region storage,
+    and quarterly restore tests.
+\end{itemize}
+
+\paragraph{8. Audit Log Overflow or Mismanagement}
+\begin{itemize}
+    \item \textbf{Description:} Unbounded audit log growth may degrade
+    performance or consume storage.
+    \item \textbf{Impact:} Reduced database efficiency.
+    \item \textbf{Mitigation:} Partition audit tables by date, archive older
+    records to cold storage after 12 months.
+\end{itemize}
+
+\paragraph{9. Version Drift Between Portals}
+\begin{itemize}
+    \item \textbf{Description:} If portal frontends evolve asynchronously, UI
+    inconsistencies or incompatible API calls may occur.
+    \item \textbf{Impact:} Broken functionality or reporting errors.
+    \item \textbf{Mitigation:} Maintain shared component libraries and strict
+    version tagging across all sub-domains.
+\end{itemize}
+
+\paragraph{10. Leadership Reporting Delays}
+\begin{itemize}
+    \item \textbf{Description:} Pastors may not receive timely insights if
+    lower-level data entry is delayed.
+    \item \textbf{Impact:} Leadership decisions based on incomplete data.
+    \item \textbf{Mitigation:} Scheduled reporting reminders, compliance KPIs,
+    and automated notifications for missing submissions.
+\end{itemize}
+
+\subsection{Technical Risks}
+
+\paragraph{1. Scalability Constraints}
+\begin{itemize}
+    \item \textbf{Description:} Rapid growth in churches or records may outpace
+    single-database performance.
+    \item \textbf{Mitigation:} Deploy read replicas for reporting, introduce
+    partitioning on date/org\_unit\_id, and plan migration path to distributed
+    analytics store if necessary.
+\end{itemize}
+
+\paragraph{2. Background Job Failures}
+\begin{itemize}
+    \item \textbf{Description:} Import, export, or scheduled jobs may fail
+    silently due to worker errors.
+    \item \textbf{Mitigation:} Implement job retry policies, error queues, and
+    alerting dashboards for failed tasks.
+\end{itemize}
+
+\paragraph{3. API Performance Degradation}
+\begin{itemize}
+    \item \textbf{Description:} Inefficient queries or unindexed filters may
+    degrade API latency under load.
+    \item \textbf{Mitigation:} Continuous monitoring of query plans and use of
+    cached summary tables for heavy endpoints.
+\end{itemize}
+
+\subsection{Operational Risks}
+
+\paragraph{1. Staff Turnover}
+\begin{itemize}
+    \item \textbf{Description:} Departure of trained users may reduce data
+    entry consistency.
+    \item \textbf{Mitigation:} Maintain user manuals, assign backup clerks, and
+    provide refresher sessions.
+\end{itemize}
+
+\paragraph{2. Misinterpretation of Reports}
+\begin{itemize}
+    \item \textbf{Description:} Pastors or finance teams may misread dashboard
+    data if untrained in metric definitions.
+    \item \textbf{Mitigation:} Include tooltips and embedded data definitions on
+    dashboards; provide glossary in appendix.
+\end{itemize}
+
+\paragraph{3. Governance Risk}
+\begin{itemize}
+    \item \textbf{Description:} Absence of clear data ownership could lead to
+    disputes or inconsistent updates.
+    \item \textbf{Mitigation:} Define roles and responsibilities clearly within
+    each church and group; enforce audit-based accountability.
+\end{itemize}
+
+\subsection{Residual Risk Statement}
+
+While technical measures and governance processes significantly reduce
+likelihood and impact, residual risk remains in user compliance and operational
+discipline. Continuous monitoring, periodic training, and consistent leadership
+oversight will be essential to maintain data quality and trust in the system.
