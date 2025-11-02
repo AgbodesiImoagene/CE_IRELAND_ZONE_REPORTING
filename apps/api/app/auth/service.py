@@ -30,9 +30,7 @@ from app.jobs.notifications import enqueue_2fa_notification
 class AuthService:
     @staticmethod
     def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
-        stmt = select(User).where(
-            User.email == email, User.is_active.is_(True)
-        )
+        stmt = select(User).where(User.email == email, User.is_active.is_(True))
         user = db.execute(stmt).scalar_one_or_none()
         if not user or not user.password_hash:
             return None
@@ -116,12 +114,17 @@ class AuthService:
         db.add(session)
         db.commit()
 
-        access_token = create_access_token({"sub": str(user_id), "user_id": str(user_id)})
+        access_token = create_access_token(
+            {"sub": str(user_id), "user_id": str(user_id)}
+        )
         return access_token, refresh_token
 
     @staticmethod
-    def refresh_access_token(db: Session, refresh_token: str) -> Optional[tuple[str, str]]:
+    def refresh_access_token(
+        db: Session, refresh_token: str
+    ) -> Optional[tuple[str, str]]:
         from app.auth.utils import verify_token
+
         payload = verify_token(refresh_token)
         if not payload or payload.get("type") != "refresh":
             return None
@@ -146,12 +149,15 @@ class AuthService:
         session.expires_at = datetime.now(timezone.utc) + timedelta(days=7)
         db.commit()
 
-        access_token = create_access_token({"sub": str(user_id), "user_id": str(user_id)})
+        access_token = create_access_token(
+            {"sub": str(user_id), "user_id": str(user_id)}
+        )
         return access_token, new_refresh
 
     @staticmethod
     def revoke_session(db: Session, refresh_token: str) -> bool:
         from app.auth.utils import verify_token
+
         payload = verify_token(refresh_token)
         if not payload:
             return False
@@ -178,7 +184,9 @@ class AuthService:
             .join(RolePermission, RolePermission.permission_id == Permission.id)
             .join(Role, Role.id == RolePermission.role_id)
             .join(OrgAssignment, OrgAssignment.role_id == Role.id)
-            .where(OrgAssignment.user_id == user_id, OrgAssignment.tenant_id == tenant_id)
+            .where(
+                OrgAssignment.user_id == user_id, OrgAssignment.tenant_id == tenant_id
+            )
             .distinct()
         )
         return [code for code in db.execute(stmt).scalars().all()]
@@ -193,7 +201,9 @@ class AuthService:
         stmt = (
             select(OrgAssignment)
             .options(joinedload(OrgAssignment.role))
-            .where(OrgAssignment.user_id == user_id, OrgAssignment.tenant_id == tenant_id)
+            .where(
+                OrgAssignment.user_id == user_id, OrgAssignment.tenant_id == tenant_id
+            )
         )
         assignments = db.execute(stmt).scalars().all()
 
@@ -224,4 +234,3 @@ class AuthService:
                 for assn in assignments
             ],
         }
-

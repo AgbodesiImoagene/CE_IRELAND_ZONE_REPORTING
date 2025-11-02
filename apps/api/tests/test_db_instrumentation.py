@@ -22,12 +22,12 @@ class TestDatabaseInstrumentation:
     def test_select_query_instrumentation(self, db: Session, caplog):
         """Test that SELECT queries emit metrics."""
         caplog.set_level(logging.INFO)
-        
+
         with patch("app.core.db_instrumentation.emit_database_query") as mock_emit:
             # Execute a SELECT query
             stmt = select(User).limit(1)
             db.execute(stmt).fetchall()
-            
+
             # Verify metric was emitted
             assert mock_emit.called
             call_args = mock_emit.call_args
@@ -40,7 +40,7 @@ class TestDatabaseInstrumentation:
         from app.core.config import settings
         from uuid import uuid4, UUID
         from app.auth.utils import hash_password
-        
+
         with patch("app.core.db_instrumentation.emit_database_query") as mock_emit:
             # Execute an INSERT query
             user = User(
@@ -52,7 +52,7 @@ class TestDatabaseInstrumentation:
             )
             db.add(user)
             db.commit()
-            
+
             # Verify metric was emitted
             assert mock_emit.called
             call_args = mock_emit.call_args
@@ -64,7 +64,7 @@ class TestDatabaseInstrumentation:
         from app.core.config import settings
         from uuid import uuid4, UUID
         from app.auth.utils import hash_password
-        
+
         with patch("app.core.db_instrumentation.emit_database_query") as mock_emit:
             # Create a user first
             user = User(
@@ -76,14 +76,14 @@ class TestDatabaseInstrumentation:
             )
             db.add(user)
             db.commit()
-            
+
             # Reset mock to count only UPDATE
             mock_emit.reset_mock()
-            
+
             # Execute an UPDATE query
             user.is_active = False
             db.commit()
-            
+
             # Verify metric was emitted
             assert mock_emit.called
             call_args = mock_emit.call_args
@@ -95,7 +95,7 @@ class TestDatabaseInstrumentation:
         from app.core.config import settings
         from uuid import uuid4, UUID
         from app.auth.utils import hash_password
-        
+
         with patch("app.core.db_instrumentation.emit_database_query") as mock_emit:
             # Create a user first
             user = User(
@@ -107,14 +107,14 @@ class TestDatabaseInstrumentation:
             )
             db.add(user)
             db.commit()
-            
+
             # Reset mock to count only DELETE
             mock_emit.reset_mock()
-            
+
             # Execute a DELETE query
             db.delete(user)
             db.commit()
-            
+
             # Verify metric was emitted
             assert mock_emit.called
             call_args = mock_emit.call_args
@@ -124,12 +124,12 @@ class TestDatabaseInstrumentation:
     def test_query_duration_captured(self, db: Session):
         """Test that query duration is accurately measured."""
         import time
-        
+
         with patch("app.core.db_instrumentation.emit_database_query") as mock_emit:
             # Execute a query
             stmt = select(User).limit(1)
             db.execute(stmt).fetchall()
-            
+
             # Verify duration is a positive number
             call_args = mock_emit.call_args
             duration_ms = call_args[1]["duration_ms"]
@@ -139,7 +139,7 @@ class TestDatabaseInstrumentation:
     def test_operation_type_detection(self, db: Session):
         """Test that operation types are correctly detected."""
         from app.core.db_instrumentation import _get_operation_type
-        
+
         assert _get_operation_type("SELECT * FROM users") == "SELECT"
         assert _get_operation_type("INSERT INTO users VALUES (...)") == "INSERT"
         assert _get_operation_type("UPDATE users SET ...") == "UPDATE"
@@ -153,12 +153,12 @@ class TestDatabaseInstrumentation:
         # Skip for SQLite (SET LOCAL is PostgreSQL-specific)
         if "sqlite" in str(engine.url).lower():
             pytest.skip("SET LOCAL is PostgreSQL-specific")
-        
+
         with patch("app.core.db_instrumentation.emit_database_query") as mock_emit:
             # Execute a SET LOCAL command
             db.execute(text("SET LOCAL app.tenant_id = 'test'"))
             db.commit()
-            
+
             # Verify metric was emitted
             assert mock_emit.called
             call_args = mock_emit.call_args
@@ -177,12 +177,8 @@ class TestDatabaseInstrumentation:
             call_count[0] += 1
             return result
 
-        with patch(
-            "time.perf_counter", side_effect=perf_counter_side_effect
-        ):
-            with patch(
-                "app.core.db_instrumentation.emit_database_query"
-            ) as mock_emit:
+        with patch("time.perf_counter", side_effect=perf_counter_side_effect):
+            with patch("app.core.db_instrumentation.emit_database_query") as mock_emit:
                 stmt = select(User).limit(1)
                 db.execute(stmt).fetchall()
 
@@ -198,14 +194,10 @@ class TestDatabaseInstrumentation:
                     for call in call_args_list
                     if call[1].get("operation") == "SELECT"
                 ]
-                assert (
-                    len(select_calls) > 0
-                ), "No SELECT query was instrumented"
+                assert len(select_calls) > 0, "No SELECT query was instrumented"
 
                 # Check that at least one SELECT call has ~500ms duration
-                durations = [
-                    call[1]["duration_ms"] for call in select_calls
-                ]
+                durations = [call[1]["duration_ms"] for call in select_calls]
                 assert any(
                     abs(d - 500.0) < 1.0 for d in durations
                 ), f"Expected ~500ms duration, got {durations}"
@@ -215,7 +207,7 @@ class TestDatabaseInstrumentation:
         from app.core.config import settings
         from uuid import uuid4, UUID
         from app.auth.utils import hash_password
-        
+
         # Execute queries even if metrics fail
         with patch(
             "app.core.db_instrumentation.emit_database_query",
@@ -230,7 +222,7 @@ class TestDatabaseInstrumentation:
             )
             db.add(user)
             db.commit()  # Should succeed despite metric failure
-            
+
             # Verify user was created
             stmt = select(User).where(User.email == "test@example.com")
             result = db.execute(stmt).scalar_one_or_none()
@@ -242,7 +234,7 @@ class TestDatabaseInstrumentation:
         from app.core.config import settings
         from uuid import uuid4, UUID
         from app.auth.utils import hash_password
-        
+
         with patch("app.core.db_instrumentation.emit_database_query") as mock_emit:
             # Create user (INSERT)
             user = User(
@@ -254,26 +246,23 @@ class TestDatabaseInstrumentation:
             )
             db.add(user)
             db.commit()
-            
+
             # Query user (SELECT)
             stmt = select(User).where(User.email == "test@example.com")
             db.execute(stmt).scalar_one()
-            
+
             # Update user (UPDATE)
             user.is_active = False
             db.commit()
-            
+
             # Delete user (DELETE)
             db.delete(user)
             db.commit()
-            
+
             # Verify all operations were instrumented
             assert mock_emit.call_count >= 4
-            operations = [
-                call[1]["operation"] for call in mock_emit.call_args_list
-            ]
+            operations = [call[1]["operation"] for call in mock_emit.call_args_list]
             assert "INSERT" in operations
             assert "SELECT" in operations
             assert "UPDATE" in operations
             assert "DELETE" in operations
-

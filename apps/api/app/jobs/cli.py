@@ -25,4 +25,3 @@ if __name__ == "__main__":
     # Allow specifying queues via command line
     queues = sys.argv[1:] if len(sys.argv) > 1 else ["default"]
     run_worker(queues)
-

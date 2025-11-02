@@ -52,9 +52,9 @@ class TestCreateInvitation:
         assert invitation.role_id == test_role.id
         assert invitation.org_unit_id == test_org_unit.id
         # Ensure timezone-aware comparison
-        assert _ensure_timezone_aware(
-            invitation.expires_at
-        ) > datetime.now(timezone.utc)
+        assert _ensure_timezone_aware(invitation.expires_at) > datetime.now(
+            timezone.utc
+        )
 
         # Check outbox notification was created
         notification = db.execute(
@@ -199,7 +199,9 @@ class TestCreateInvitation:
 
 
 class TestActivateUser:
-    def test_activate_user_success(self, db, tenant_id, admin_user, test_role, test_org_unit):
+    def test_activate_user_success(
+        self, db, tenant_id, admin_user, test_role, test_org_unit
+    ):
         """Test successful user activation from invitation."""
         # Create invitation
         invitation = UserProvisioningService.create_invitation(
@@ -385,9 +387,7 @@ class TestCreateUserDirect:
 
         # Check assignment was created
         assignment = db.execute(
-            select(OrgAssignment).where(
-                OrgAssignment.user_id == user.id
-            )
+            select(OrgAssignment).where(OrgAssignment.user_id == user.id)
         ).scalar_one_or_none()
         assert assignment is not None
 
@@ -430,4 +430,3 @@ class TestCreateUserDirect:
                 custom_org_unit_ids=None,
                 twofa_delivery="email",
             )
-

@@ -19,7 +19,7 @@ class InstrumentedRedis:
 
     def __init__(self, redis_client: Any):
         """Initialize with a Redis client.
-        
+
         Args:
             redis_client: Underlying Redis client (sync or async)
         """
@@ -34,47 +34,57 @@ class InstrumentedRedis:
             return object.__getattribute__(self, name)
         except AttributeError:
             pass
-        
+
         # Get attribute from underlying client
         attr = getattr(self._client, name)
-        
+
         # If it's a Redis command method, wrap it
         if callable(attr) and name.upper() in [
-            "GET", "SET", "SETEX", "DELETE", "EXISTS", "ZADD",
-            "ZCARD", "ZRANGE", "ZREMRANGEBYSCORE", "EXPIRE",
+            "GET",
+            "SET",
+            "SETEX",
+            "DELETE",
+            "EXISTS",
+            "ZADD",
+            "ZCARD",
+            "ZRANGE",
+            "ZREMRANGEBYSCORE",
+            "EXPIRE",
             "PIPELINE",
         ]:
             return self._wrap_method(name, attr)
-        
+
         return attr
 
     def _wrap_method(self, operation: str, method: Any) -> Any:
         """Wrap a Redis method with instrumentation."""
         # Check if method is async by inspecting it
         import inspect
+
         if inspect.iscoroutinefunction(method):
             return self._wrap_async_method(operation, method)
         return self._wrap_sync_method(operation, method)
 
     def _wrap_async_method(self, operation: str, method: Any) -> Any:
         """Wrap an async Redis method."""
+
         async def wrapper(*args: Any, **kwargs: Any) -> Any:
             start_time = time.perf_counter()
             try:
                 result = await method(*args, **kwargs)
                 duration_ms = (time.perf_counter() - start_time) * 1000
-                
+
                 # Emit success metric
                 emit_redis_operation(
                     operation=operation.upper(),
                     duration_ms=duration_ms,
                     success=True,
                 )
-                
+
                 return result
             except Exception as e:
                 duration_ms = (time.perf_counter() - start_time) * 1000
-                
+
                 # Emit error metric
                 emit_redis_operation(
                     operation=operation.upper(),
@@ -82,7 +92,7 @@ class InstrumentedRedis:
                     success=False,
                     error_type=type(e).__name__,
                 )
-                
+
                 logger.error(
                     f"Redis {operation} operation failed: {str(e)}",
                     extra={
@@ -94,28 +104,29 @@ class InstrumentedRedis:
                     exc_info=True,
                 )
                 raise
-        
+
         return wrapper
 
     def _wrap_sync_method(self, operation: str, method: Any) -> Any:
         """Wrap a sync Redis method."""
+
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             start_time = time.perf_counter()
             try:
                 result = method(*args, **kwargs)
                 duration_ms = (time.perf_counter() - start_time) * 1000
-                
+
                 # Emit success metric
                 emit_redis_operation(
                     operation=operation.upper(),
                     duration_ms=duration_ms,
                     success=True,
                 )
-                
+
                 return result
             except Exception as e:
                 duration_ms = (time.perf_counter() - start_time) * 1000
-                
+
                 # Emit error metric
                 emit_redis_operation(
                     operation=operation.upper(),
@@ -123,7 +134,7 @@ class InstrumentedRedis:
                     success=False,
                     error_type=type(e).__name__,
                 )
-                
+
                 logger.error(
                     f"Redis {operation} operation failed: {str(e)}",
                     extra={
@@ -135,7 +146,7 @@ class InstrumentedRedis:
                     exc_info=True,
                 )
                 raise
-        
+
         return wrapper
 
     # Redis commands are handled via __getattr__ wrapping
@@ -162,14 +173,17 @@ class InstrumentedRedisPipeline:
 
     def __init__(self, pipeline: Any):
         """Initialize with a Redis pipeline.
-        
+
         Args:
             pipeline: Underlying Redis pipeline
         """
         self._pipeline = pipeline
         import inspect
+
         execute_method = getattr(pipeline, "execute", None)
-        self._is_async = execute_method is not None and inspect.iscoroutinefunction(execute_method)
+        self._is_async = execute_method is not None and inspect.iscoroutinefunction(
+            execute_method
+        )
 
     def __getattr__(self, name: str) -> Any:
         """Delegate to underlying pipeline."""
@@ -181,25 +195,25 @@ class InstrumentedRedisPipeline:
         try:
             result = await self._pipeline.execute()
             duration_ms = (time.perf_counter() - start_time) * 1000
-            
+
             # Emit metric for pipeline execution
             emit_redis_operation(
                 operation="PIPELINE",
                 duration_ms=duration_ms,
                 success=True,
             )
-            
+
             return result
         except Exception as e:
             duration_ms = (time.perf_counter() - start_time) * 1000
-            
+
             emit_redis_operation(
                 operation="PIPELINE",
                 duration_ms=duration_ms,
                 success=False,
                 error_type=type(e).__name__,
             )
-            
+
             logger.error(
                 f"Redis pipeline execution failed: {str(e)}",
                 extra={
@@ -218,25 +232,25 @@ class InstrumentedRedisPipeline:
         try:
             result = self._pipeline.execute()
             duration_ms = (time.perf_counter() - start_time) * 1000
-            
+
             # Emit metric for pipeline execution
             emit_redis_operation(
                 operation="PIPELINE",
                 duration_ms=duration_ms,
                 success=True,
             )
-            
+
             return result
         except Exception as e:
             duration_ms = (time.perf_counter() - start_time) * 1000
-            
+
             emit_redis_operation(
                 operation="PIPELINE",
                 duration_ms=duration_ms,
                 success=False,
                 error_type=type(e).__name__,
             )
-            
+
             logger.error(
                 f"Redis pipeline execution failed: {str(e)}",
                 extra={
@@ -257,4 +271,3 @@ class InstrumentedRedisPipeline:
                 return self.execute_async
             return self.execute_sync
         return super().__getattribute__(name)
-

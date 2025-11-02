@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.common.models import OutboxNotification
 from app.jobs.queue import emails_queue, sms_queue
 
+
 def enqueue_2fa_notification(
     db: Session,
     email: str | None = None,
@@ -60,4 +61,3 @@ def enqueue_2fa_notification(
         pass
 
     return notification
-

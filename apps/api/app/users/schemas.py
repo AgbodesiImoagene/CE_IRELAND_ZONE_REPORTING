@@ -13,9 +13,7 @@ class InvitationCreateRequest(BaseModel):
     email: EmailStr
     role_id: UUID
     org_unit_id: UUID
-    scope_type: str = Field(
-        default="self", pattern="^(self|subtree|custom_set)$"
-    )
+    scope_type: str = Field(default="self", pattern="^(self|subtree|custom_set)$")
     custom_org_unit_ids: Optional[list[UUID]] = Field(
         default=None
     )  # For custom_set scope
@@ -53,9 +51,7 @@ class UserCreateRequest(BaseModel):
     password: str = Field(min_length=12)  # Temporary password
     role_id: UUID
     org_unit_id: UUID
-    scope_type: str = Field(
-        default="self", pattern="^(self|subtree|custom_set)$"
-    )
+    scope_type: str = Field(default="self", pattern="^(self|subtree|custom_set)$")
     custom_org_unit_ids: Optional[list[UUID]] = Field(default=None)
     twofa_delivery: str = Field(default="email", pattern="^(sms|email)$")
 
@@ -67,4 +63,3 @@ class UserCreateResponse(BaseModel):
     email: str
     is_active: bool
     requires_2fa: bool = True
-

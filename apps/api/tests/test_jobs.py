@@ -260,9 +260,9 @@ class TestProcessOutboxNotification:
         assert result is True
         # Re-query to get updated state
         db.expire_all()  # Expire all objects to force reload from DB
-        updated_notification = db.query(OutboxNotification).filter_by(
-            id=notification.id
-        ).first()
+        updated_notification = (
+            db.query(OutboxNotification).filter_by(id=notification.id).first()
+        )
         assert updated_notification is not None
         assert updated_notification.delivery_state == "sent"
         assert updated_notification.sent_at is not None
@@ -293,15 +293,13 @@ class TestProcessOutboxNotification:
         assert result is True
         # Re-query to get updated state
         db.expire_all()
-        updated_notification = db.query(OutboxNotification).filter_by(
-            id=notification.id
-        ).first()
+        updated_notification = (
+            db.query(OutboxNotification).filter_by(id=notification.id).first()
+        )
         assert updated_notification is not None
         assert updated_notification.delivery_state == "sent"
 
-    def test_process_outbox_notification_not_found(
-        self, db: Session  # noqa: ARG001
-    ):
+    def test_process_outbox_notification_not_found(self, db: Session):  # noqa: ARG001
         """Test processing non-existent notification."""
         fake_id = str(uuid4())
 
@@ -357,9 +355,9 @@ class TestProcessOutboxNotification:
 
         # Re-query to get updated state
         db.expire_all()
-        updated_notification = db.query(OutboxNotification).filter_by(
-            id=notification.id
-        ).first()
+        updated_notification = (
+            db.query(OutboxNotification).filter_by(id=notification.id).first()
+        )
         assert updated_notification is not None
         assert updated_notification.delivery_state == "failed"
         assert updated_notification.last_error is not None
@@ -384,15 +382,13 @@ class TestProcessOutboxNotification:
         assert result is False
         # Re-query to get updated state
         db.expire_all()
-        updated_notification = db.query(OutboxNotification).filter_by(
-            id=notification.id
-        ).first()
+        updated_notification = (
+            db.query(OutboxNotification).filter_by(id=notification.id).first()
+        )
         assert updated_notification is not None
         assert updated_notification.delivery_state == "failed"
         assert updated_notification.last_error is not None
-        assert "Unknown notification type" in str(
-            updated_notification.last_error
-        )
+        assert "Unknown notification type" in str(updated_notification.last_error)
 
 
 class TestEnqueue2FANotification:
@@ -478,9 +474,7 @@ class TestNotificationRetries:
 
         assert result is False  # Current attempt failed
         db.expire_all()
-        updated = db.query(OutboxNotification).filter_by(
-            id=notification.id
-        ).first()
+        updated = db.query(OutboxNotification).filter_by(id=notification.id).first()
         assert updated is not None
         assert updated.retry_count == 1
         assert updated.delivery_state == "pending"
@@ -510,9 +504,7 @@ class TestNotificationRetries:
 
         assert result is False
         db.expire_all()
-        updated = db.query(OutboxNotification).filter_by(
-            id=notification.id
-        ).first()
+        updated = db.query(OutboxNotification).filter_by(id=notification.id).first()
         assert updated is not None
         assert updated.delivery_state == "failed"
         assert (
@@ -569,9 +561,7 @@ class TestNotificationRetries:
 
         assert result is True
         db.expire_all()
-        updated = db.query(OutboxNotification).filter_by(
-            id=notification.id
-        ).first()
+        updated = db.query(OutboxNotification).filter_by(id=notification.id).first()
         assert updated is not None
         assert updated.delivery_state == "sent"
         assert updated.sent_at is not None

@@ -85,9 +85,7 @@ def validate_scope_assignments(
 
     # Check org access
     if not has_org_access(db, creator_id, tenant_id, target_org_unit_id):
-        raise ValueError(
-            f"User does not have access to org unit {target_org_unit_id}"
-        )
+        raise ValueError(f"User does not have access to org unit {target_org_unit_id}")
 
     # TODO: Additional validation:
     # - Can only assign roles that are "below" creator's own role level
@@ -95,4 +93,3 @@ def validate_scope_assignments(
     # - Group Pastor can only assign church-level roles
     # - Church Pastor can only assign portal roles (Church Admin, Finance
     #   Officer, Cell Leader)
-

@@ -101,14 +101,14 @@ format: ## Format code with black (run locally, requires black installed)
 
 format-docker: ## Format code with black (in Docker container)
 	docker compose -f $(COMPOSE_FILE) exec $(API_SERVICE) pip install black --quiet || true
-	docker compose -f $(COMPOSE_FILE) exec $(API_SERVICE) black apps/api
+	docker compose -f $(COMPOSE_FILE) exec $(API_SERVICE) black app/
 
 format-check: ## Check code formatting with black (no changes, run locally)
 	black --check apps/api
 
 format-check-docker: ## Check code formatting with black (in Docker container)
 	docker compose -f $(COMPOSE_FILE) exec $(API_SERVICE) pip install black --quiet || true
-	docker compose -f $(COMPOSE_FILE) exec $(API_SERVICE) black --check apps/api
+	docker compose -f $(COMPOSE_FILE) exec $(API_SERVICE) black --check app/
 
 # Cleanup
 clean: ## Remove stopped containers and unused images

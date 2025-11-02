@@ -4,14 +4,10 @@ import os
 
 from app.core.config import settings
 
-POSTGRES_URL = os.getenv(
-    "POSTGRES_URL", "postgresql+psycopg://app:app@db:5432/app"
-)
+POSTGRES_URL = os.getenv("POSTGRES_URL", "postgresql+psycopg://app:app@db:5432/app")
 
 engine = create_engine(POSTGRES_URL, pool_pre_ping=True, future=True)
-SessionLocal = sessionmaker(
-    bind=engine, autoflush=False, autocommit=False, future=True
-)
+SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
 
 # Import database instrumentation to register event listeners
 # This automatically instruments all queries on this engine
@@ -51,9 +47,7 @@ def set_rls_defaults(session, transaction, connection):  # noqa: ARG001
 
     # Set default tenant_id (can be overridden by middleware)
     tenant_id_str = str(settings.tenant_id)
-    connection.execute(
-        text(f"SET LOCAL app.tenant_id = '{tenant_id_str}'")
-    )
+    connection.execute(text(f"SET LOCAL app.tenant_id = '{tenant_id_str}'"))
 
 
 def get_db():

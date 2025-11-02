@@ -20,9 +20,7 @@ class TestOAuthStart:
     ):
         # Mock configuration
         mock_settings.google_client_id = "test-google-id"
-        mock_settings.oauth_redirect_base_url = (
-            "http://localhost:8000/api/v1/oauth"
-        )
+        mock_settings.oauth_redirect_base_url = "http://localhost:8000/api/v1/oauth"
 
         # Mock state generation
         mock_generate_state.return_value = "generated_state_token"
@@ -86,9 +84,7 @@ class TestOAuthCallback:
 
         # Mock settings
         with patch("app.auth.oauth_routes.settings") as mock_settings:
-            mock_settings.oauth_redirect_base_url = (
-                "http://localhost:8000/api/v1/oauth"
-            )
+            mock_settings.oauth_redirect_base_url = "http://localhost:8000/api/v1/oauth"
 
             response = client.get(
                 "/api/v1/oauth/google/callback?code=test_code&state=test_state"
@@ -135,9 +131,7 @@ class TestOAuthCallback:
         mock_get_client.return_value = mock_client
 
         with patch("app.auth.oauth_routes.settings") as mock_settings:
-            mock_settings.oauth_redirect_base_url = (
-                "http://localhost:8000/api/v1/oauth"
-            )
+            mock_settings.oauth_redirect_base_url = "http://localhost:8000/api/v1/oauth"
 
             response = client.get(
                 "/api/v1/oauth/google/callback?code=test_code&state=test_state"
@@ -176,9 +170,7 @@ class TestOAuthCallback:
         mock_get_client.return_value = mock_client
 
         with patch("app.auth.oauth_routes.settings") as mock_settings:
-            mock_settings.oauth_redirect_base_url = (
-                "http://localhost:8000/api/v1/oauth"
-            )
+            mock_settings.oauth_redirect_base_url = "http://localhost:8000/api/v1/oauth"
 
             response = client.get(
                 "/api/v1/oauth/google/callback?code=test_code&state=test_state"
@@ -267,4 +259,3 @@ class TestOAuthIntegration:
         identity = OAuthService.find_identity(db, provider, provider_user_id)
         assert identity is not None
         assert identity.user_id == test_user.id
-

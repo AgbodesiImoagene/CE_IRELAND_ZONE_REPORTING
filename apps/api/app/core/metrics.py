@@ -128,9 +128,7 @@ class EMFMetrics:
                         "Namespace": self.namespace,
                         "Metrics": metrics,
                         "Dimensions": (
-                            [[dim] for dim in dimensions.keys()]
-                            if dimensions
-                            else []
+                            [[dim] for dim in dimensions.keys()] if dimensions else []
                         ),
                     }
                 ],

@@ -279,9 +279,7 @@ def log_execution(
                         "function": func_name,
                         "args": str(args) if args else None,
                         "kwargs": (
-                            {k: str(v) for k, v in kwargs.items()}
-                            if kwargs
-                            else None
+                            {k: str(v) for k, v in kwargs.items()} if kwargs else None
                         ),
                     },
                 )
@@ -329,4 +327,3 @@ def log_execution(
         return wrapper  # type: ignore[return-value]
 
     return decorator
-

@@ -5,6 +5,7 @@ Revises: b429a8fd778c
 Create Date: 2025-11-01 12:58:00.000000
 
 """
+
 from typing import Sequence, Union
 
 from alembic import op
@@ -12,8 +13,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '202511011258'
-down_revision: Union[str, None] = 'b429a8fd778c'
+revision: str = "202511011258"
+down_revision: Union[str, None] = "b429a8fd778c"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -21,12 +22,13 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     """
     Create RLS helper functions.
-    
+
     These functions are used by RLS policies to check permissions and org access.
     """
-    
+
     # Function to check if a permission exists in the session's permission array
-    op.execute("""
+    op.execute(
+        """
         CREATE OR REPLACE FUNCTION has_perm(p text) RETURNS boolean AS $$
         BEGIN
             RETURN p = ANY (
@@ -40,10 +42,12 @@ def upgrade() -> None:
                 RETURN false;
         END;
         $$ LANGUAGE plpgsql STABLE;
-    """)
-    
+    """
+    )
+
     # Function to check if an org unit is a descendant of another
-    op.execute("""
+    op.execute(
+        """
         CREATE OR REPLACE FUNCTION is_descendant_org(
             target_org_id uuid,
             ancestor_org_id uuid
@@ -72,10 +76,12 @@ def upgrade() -> None:
             RETURN false;
         END;
         $$ LANGUAGE plpgsql STABLE;
-    """)
-    
+    """
+    )
+
     # Function to check if current user has access to an org unit
-    op.execute("""
+    op.execute(
+        """
         CREATE OR REPLACE FUNCTION has_org_access(target_org_id uuid) 
         RETURNS boolean AS $$
         DECLARE
@@ -132,7 +138,8 @@ def upgrade() -> None:
             RETURN false;
         END;
         $$ LANGUAGE plpgsql STABLE;
-    """)
+    """
+    )
 
 
 def downgrade() -> None:
@@ -140,4 +147,3 @@ def downgrade() -> None:
     op.execute("DROP FUNCTION IF EXISTS has_org_access(uuid)")
     op.execute("DROP FUNCTION IF EXISTS is_descendant_org(uuid, uuid)")
     op.execute("DROP FUNCTION IF EXISTS has_perm(text)")
-

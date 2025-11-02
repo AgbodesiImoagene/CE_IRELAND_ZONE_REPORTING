@@ -9,9 +9,7 @@ from app.common.models import UserIdentity
 
 class TestFindUserByEmail:
     def test_find_existing_user(self, db, tenant_id, test_user):
-        user = OAuthService.find_user_by_email(
-            db, "test@example.com", UUID(tenant_id)
-        )
+        user = OAuthService.find_user_by_email(db, "test@example.com", UUID(tenant_id))
         assert user is not None
         assert user.id == test_user.id
         assert user.email == "test@example.com"
@@ -26,9 +24,7 @@ class TestFindUserByEmail:
         test_user.is_active = False
         db.commit()
 
-        user = OAuthService.find_user_by_email(
-            db, "test@example.com", UUID(tenant_id)
-        )
+        user = OAuthService.find_user_by_email(db, "test@example.com", UUID(tenant_id))
         assert user is None
 
 
@@ -186,9 +182,7 @@ class TestHandleOAuthCallback:
 
     def test_callback_create_new_user_no_invitation(self, db, tenant_id):
         """Test OAuth signup fails without invitation."""
-        with pytest.raises(
-            ValueError, match="No valid invitation found"
-        ):
+        with pytest.raises(ValueError, match="No valid invitation found"):
             OAuthService.handle_oauth_callback(
                 db,
                 "google",

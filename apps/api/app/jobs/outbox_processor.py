@@ -20,7 +20,9 @@ from app.jobs.queue import emails_queue, sms_queue
 logger = logging.getLogger(__name__)
 
 
-def process_outbox_notifications(batch_size: int = 10, max_iterations: Optional[int] = None) -> None:
+def process_outbox_notifications(
+    batch_size: int = 10, max_iterations: Optional[int] = None
+) -> None:
     """
     Process pending outbox notifications by enqueueing them as background jobs.
 
@@ -84,7 +86,9 @@ def process_outbox_notifications(batch_size: int = 10, max_iterations: Optional[
             db.commit()
 
         except Exception as e:
-            logger.error(f"Error processing outbox notifications: {str(e)}", exc_info=True)
+            logger.error(
+                f"Error processing outbox notifications: {str(e)}", exc_info=True
+            )
             if db:
                 db.rollback()
         finally:
@@ -102,4 +106,3 @@ if __name__ == "__main__":
     )
     logger.info("Starting outbox notification processor...")
     process_outbox_notifications()
-

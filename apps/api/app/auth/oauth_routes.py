@@ -132,9 +132,7 @@ async def oauth_callback(
             async with client:
                 resp = await client.get(user_info_url)
                 user_info = resp.json()
-                provider_user_id = str(
-                    user_info.get("id") or user_info.get("sub", "")
-                )
+                provider_user_id = str(user_info.get("id") or user_info.get("sub", ""))
                 email = (
                     user_info.get("email", "").lower()
                     if user_info.get("email")
@@ -142,9 +140,7 @@ async def oauth_callback(
                 )
                 email_verified = user_info.get("verified_email", False)
         else:  # facebook
-            user_info_url = (
-                "https://graph.facebook.com/me?fields=id,email,name"
-            )
+            user_info_url = "https://graph.facebook.com/me?fields=id,email,name"
             async with client:
                 resp = await client.get(user_info_url)
                 user_info = resp.json()
@@ -154,9 +150,7 @@ async def oauth_callback(
                     if user_info.get("email")
                     else None
                 )
-                email_verified = bool(
-                    email
-                )  # Facebook doesn't provide verification
+                email_verified = bool(email)  # Facebook doesn't provide verification
 
         if not provider_user_id:
             raise HTTPException(

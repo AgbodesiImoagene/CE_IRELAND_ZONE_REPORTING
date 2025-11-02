@@ -39,9 +39,7 @@ class UserProvisioningService:
     ) -> UserInvitation:
         """Create a user invitation."""
         # Validate creator can create this user
-        validate_scope_assignments(
-            db, creator_id, tenant_id, org_unit_id, role_id
-        )
+        validate_scope_assignments(db, creator_id, tenant_id, org_unit_id, role_id)
 
         # Check if user already exists
         existing = db.execute(
@@ -68,9 +66,7 @@ class UserProvisioningService:
             )
         ).scalar_one_or_none()
         if pending:
-            raise ValueError(
-                "Pending invitation already exists for this email"
-            )
+            raise ValueError("Pending invitation already exists for this email")
 
         # Generate secure token
         token = secrets.token_urlsafe(32)
@@ -125,6 +121,7 @@ class UserProvisioningService:
 
         # Enqueue notification for processing
         from app.jobs.queue import emails_queue
+
         try:
             emails_queue.enqueue(
                 "app.jobs.tasks.process_outbox_notification",
@@ -205,11 +202,15 @@ class UserProvisioningService:
 
         # Create custom_units if needed
         if invitation.scope_type == "custom_set":
-            invitation_units = db.execute(
-                select(UserInvitationUnit).where(
-                    UserInvitationUnit.invitation_id == invitation.id
+            invitation_units = (
+                db.execute(
+                    select(UserInvitationUnit).where(
+                        UserInvitationUnit.invitation_id == invitation.id
+                    )
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
 
             for inv_unit in invitation_units:
                 assignment_unit = OrgAssignmentUnit(
@@ -254,9 +255,7 @@ class UserProvisioningService:
     ) -> User:
         """Create user directly (for onsite scenarios)."""
         # Validate creator can create this user
-        validate_scope_assignments(
-            db, creator_id, tenant_id, org_unit_id, role_id
-        )
+        validate_scope_assignments(db, creator_id, tenant_id, org_unit_id, role_id)
 
         # Check if user exists
         existing = db.execute(
@@ -316,4 +315,3 @@ class UserProvisioningService:
         db.refresh(user)
 
         return user
-

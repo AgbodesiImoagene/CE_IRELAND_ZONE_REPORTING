@@ -33,4 +33,3 @@ sms_queue = Queue("sms", connection=get_redis_connection())
 imports_queue = Queue("imports", connection=get_redis_connection())
 exports_queue = Queue("exports", connection=get_redis_connection())
 summaries_queue = Queue("summaries", connection=get_redis_connection())
-

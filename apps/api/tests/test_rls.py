@@ -23,6 +23,7 @@ class TestRLSDatabaseDetection:
 
     def test_is_postgresql_handles_no_bind(self):
         """Test that missing bind is handled gracefully."""
+
         # Create a mock session without bind
         class MockSession:
             pass
@@ -34,7 +35,9 @@ class TestRLSDatabaseDetection:
 class TestRLSContextSetting:
     """Test RLS context setting and clearing."""
 
-    def test_set_rls_context_with_user_and_permissions(self, db: Session, tenant_id: str):
+    def test_set_rls_context_with_user_and_permissions(
+        self, db: Session, tenant_id: str
+    ):
         """Test setting RLS context with user ID and permissions."""
         user_id = uuid4()
         tenant_uuid = UUID(tenant_id)
@@ -86,7 +89,9 @@ class TestRLSContextSetting:
 
         assert True
 
-    def test_rls_context_disabled_when_flag_off(self, db: Session, tenant_id: str, monkeypatch):
+    def test_rls_context_disabled_when_flag_off(
+        self, db: Session, tenant_id: str, monkeypatch
+    ):
         """Test that RLS operations are skipped when enable_rls is False."""
         user_id = uuid4()
         tenant_uuid = UUID(tenant_id)
@@ -164,4 +169,3 @@ class TestRLSIntegration:
         # Should still work after clearing
         found_after = db.get(User, user_id)
         assert found_after is not None
-

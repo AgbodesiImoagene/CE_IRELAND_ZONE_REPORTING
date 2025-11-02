@@ -35,9 +35,7 @@ class OAuthService:
     }
 
     @staticmethod
-    def find_user_by_email(
-        db: Session, email: str, tenant_id: UUID
-    ) -> Optional[User]:
+    def find_user_by_email(db: Session, email: str, tenant_id: UUID) -> Optional[User]:
         """Find user by email address."""
         stmt = select(User).where(
             User.email == email.lower(),
@@ -157,9 +155,7 @@ class OAuthService:
 
             # Check for pending invitation and auto-activate
             if email:
-                OAuthService._check_and_activate_invitation(
-                    db, user, email, tenant_id
-                )
+                OAuthService._check_and_activate_invitation(db, user, email, tenant_id)
 
             return user, False
         else:
@@ -194,9 +190,7 @@ class OAuthService:
             )
 
             # Auto-activate invitation (create org assignment)
-            OAuthService._check_and_activate_invitation(
-                db, user, email, tenant_id
-            )
+            OAuthService._check_and_activate_invitation(db, user, email, tenant_id)
 
             return user, True
 
@@ -239,11 +233,15 @@ class OAuthService:
 
                 # Create custom_units if needed
                 if invitation.scope_type == "custom_set":
-                    invitation_units = db.execute(
-                        select(UserInvitationUnit).where(
-                            UserInvitationUnit.invitation_id == invitation.id
+                    invitation_units = (
+                        db.execute(
+                            select(UserInvitationUnit).where(
+                                UserInvitationUnit.invitation_id == invitation.id
+                            )
                         )
-                    ).scalars().all()
+                        .scalars()
+                        .all()
+                    )
 
                     for inv_unit in invitation_units:
                         assignment_unit = OrgAssignmentUnit(

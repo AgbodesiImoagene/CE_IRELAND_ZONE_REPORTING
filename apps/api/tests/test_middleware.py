@@ -115,12 +115,8 @@ class TestRequestLoggingMiddleware:
 
         # Check that logs contain request/response info
         log_records = [record.message for record in caplog.records]
-        request_logs = [
-            log for log in log_records if '"type": "http_request"' in log
-        ]
-        response_logs = [
-            log for log in log_records if '"type": "http_response"' in log
-        ]
+        request_logs = [log for log in log_records if '"type": "http_request"' in log]
+        response_logs = [log for log in log_records if '"type": "http_response"' in log]
 
         no_req_msg = f"No request logs found. All logs: {log_records}"
         assert len(request_logs) > 0, no_req_msg
@@ -137,9 +133,7 @@ class TestRequestLoggingMiddleware:
         assert response_log_data["type"] == "http_response"
         assert response_log_data["status_code"] == 200
 
-    def test_excludes_health_endpoint_from_logging(
-        self, client: TestClient, caplog
-    ):
+    def test_excludes_health_endpoint_from_logging(self, client: TestClient, caplog):
         """Test that health endpoint is excluded from detailed logging."""
         import logging
 
@@ -153,9 +147,7 @@ class TestRequestLoggingMiddleware:
         # Should not have request/response logs (excluded)
         log_records = [record.message for record in caplog.records]
         # Check that no request logs exist for excluded path
-        request_logs = [
-            log for log in log_records if '"type":"http_request"' in log
-        ]
+        request_logs = [log for log in log_records if '"type":"http_request"' in log]
         # Health endpoint is excluded, so no detailed logs
         # (but might have other logs)
         # The middleware returns early for excluded paths, so no logging
@@ -260,9 +252,7 @@ class TestRateLimitingMiddleware:
         mock_redis = AsyncMock()
         mock_redis.pipeline = lambda: mock_pipe
         # Mock oldest request for retry-after calculation
-        mock_redis.zrange = AsyncMock(
-            return_value=[(b"timestamp", time.time() - 30)]
-        )
+        mock_redis.zrange = AsyncMock(return_value=[(b"timestamp", time.time() - 30)])
 
         async def async_get_redis():
             return mock_redis
@@ -330,9 +320,7 @@ class TestSlowConnectionMiddleware:
         async def test_endpoint():
             return {"status": "ok"}
 
-        app.add_middleware(
-            SlowConnectionMiddleware, connection_timeout_seconds=5.0
-        )
+        app.add_middleware(SlowConnectionMiddleware, connection_timeout_seconds=5.0)
         client = TestClient(app)
         response = client.get("/test")
         assert response.status_code == 200
@@ -347,9 +335,7 @@ class TestSlowConnectionMiddleware:
             await asyncio.sleep(0.5)  # Longer than 0.1s timeout
             return {"status": "ok"}
 
-        app.add_middleware(
-            SlowConnectionMiddleware, connection_timeout_seconds=0.1
-        )
+        app.add_middleware(SlowConnectionMiddleware, connection_timeout_seconds=0.1)
         # TestClient doesn't accept timeout parameter, but that's okay
         # The middleware will enforce the timeout
         client = TestClient(app)
@@ -366,9 +352,7 @@ class TestSlowConnectionMiddleware:
         async def health():
             return {"status": "ok"}
 
-        app.add_middleware(
-            SlowConnectionMiddleware, connection_timeout_seconds=0.1
-        )
+        app.add_middleware(SlowConnectionMiddleware, connection_timeout_seconds=0.1)
         client = TestClient(app)
         response = client.get("/health")
         # Should work without timeout check

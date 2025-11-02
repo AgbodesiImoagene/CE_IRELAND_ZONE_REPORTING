@@ -29,7 +29,7 @@ async def get_redis_pool() -> aioredis.Redis | None:
     if _redis_pool is None and settings.enable_rate_limiting:
         try:
             from app.core.redis_instrumentation import InstrumentedRedis
-            
+
             redis_client = await aioredis.from_url(
                 settings.redis_url,
                 encoding="utf-8",
@@ -41,6 +41,7 @@ async def get_redis_pool() -> aioredis.Redis | None:
             logger.warning(f"Failed to connect to Redis for rate limiting: {e}")
             return None
     return _redis_pool
+
 
 # Sensitive fields to redact from logs
 SENSITIVE_FIELDS = {
@@ -80,13 +81,9 @@ def _redact_sensitive_data(data: dict | None) -> dict | None:
 class RequestIDMiddleware(BaseHTTPMiddleware):
     """Middleware to add request ID to all requests and responses."""
 
-    async def dispatch(
-        self, request: Request, call_next: Callable
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
         # Use existing X-Request-ID if present, otherwise generate one
-        request_id = request.headers.get(
-            "X-Request-ID", str(uuid.uuid4())
-        )
+        request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
 
         # Add request ID to request state
         request.state.request_id = request_id
@@ -103,9 +100,7 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Middleware to add security headers to all responses."""
 
-    async def dispatch(
-        self, request: Request, call_next: Callable
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
         response = await call_next(request)
 
         # Security headers
@@ -115,9 +110,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
         # Only add HSTS in production (HTTPS)
         if settings.app_env == "production":
-            response.headers[
-                "Strict-Transport-Security"
-            ] = "max-age=31536000; includeSubDomains"
+            response.headers["Strict-Transport-Security"] = (
+                "max-age=31536000; includeSubDomains"
+            )
 
         return response
 
@@ -137,14 +132,9 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         # Track active requests for gauge metric
         self._active_requests = 0
 
-    async def dispatch(
-        self, request: Request, call_next: Callable
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
         # Skip logging for excluded paths
-        if any(
-            request.url.path.startswith(path)
-            for path in self.exclude_paths
-        ):
+        if any(request.url.path.startswith(path) for path in self.exclude_paths):
             return await call_next(request)
 
         # Extract request information
@@ -198,7 +188,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         except Exception as e:
             status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
             error = str(e)
-            
+
             # Log exception with full context
             logger.error(
                 f"Request processing error: {type(e).__name__}: {str(e)}",
@@ -260,8 +250,10 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                 response_log["error"] = error
 
             # Log response
-            log_level = logging.ERROR if status_code >= 500 else (
-                logging.WARNING if status_code >= 400 else logging.INFO
+            log_level = (
+                logging.ERROR
+                if status_code >= 500
+                else (logging.WARNING if status_code >= 400 else logging.INFO)
             )
             logger.log(
                 log_level,
@@ -333,14 +325,9 @@ class RateLimitingMiddleware(BaseHTTPMiddleware):
             "/redoc",
         ]
 
-    async def dispatch(
-        self, request: Request, call_next: Callable
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
         # Skip rate limiting for excluded paths
-        if any(
-            request.url.path.startswith(path)
-            for path in self.exclude_paths
-        ):
+        if any(request.url.path.startswith(path) for path in self.exclude_paths):
             return await call_next(request)
 
         # Get client identifier (IP address or user ID)
@@ -380,7 +367,7 @@ class RateLimitingMiddleware(BaseHTTPMiddleware):
 
             # Use Redis pipeline for atomic operations
             pipe = redis_client.pipeline()
-            
+
             # Remove old entries outside the window
             pipe.zremrangebyscore(redis_key, 0, window_start)
 
@@ -395,7 +382,7 @@ class RateLimitingMiddleware(BaseHTTPMiddleware):
 
             # Execute pipeline atomically
             results = await pipe.execute()
-            
+
             # results[0] = zremrangebyscore result (number removed)
             # results[1] = zcard result (count before adding current request)
             # results[2] = zadd result (number added)
@@ -448,9 +435,7 @@ class RateLimitingMiddleware(BaseHTTPMiddleware):
             response.headers["X-RateLimit-Remaining"] = str(
                 max(0, max_requests - current_count)
             )
-            response.headers["X-RateLimit-Reset"] = str(
-                int(now + window_seconds)
-            )
+            response.headers["X-RateLimit-Reset"] = str(int(now + window_seconds))
 
             return response
 
@@ -483,14 +468,9 @@ class SlowConnectionMiddleware(BaseHTTPMiddleware):
             "/redoc",
         ]
 
-    async def dispatch(
-        self, request: Request, call_next: Callable
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
         # Skip for excluded paths
-        if any(
-            request.url.path.startswith(path)
-            for path in self.exclude_paths
-        ):
+        if any(request.url.path.startswith(path) for path in self.exclude_paths):
             return await call_next(request)
 
         # Use asyncio timeout to reject slow connections
@@ -541,12 +521,9 @@ def setup_slow_connection_rejection(app) -> None:
     if settings.enable_slow_connection_rejection:
         app.add_middleware(
             SlowConnectionMiddleware,
-            connection_timeout_seconds=(
-                settings.slow_connection_timeout_seconds
-            ),
+            connection_timeout_seconds=(settings.slow_connection_timeout_seconds),
         )
         logger.info(
             f"Slow connection rejection middleware enabled "
             f"(timeout: {settings.slow_connection_timeout_seconds}s)"
         )
-

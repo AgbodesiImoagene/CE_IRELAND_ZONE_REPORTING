@@ -249,9 +249,7 @@ async def validation_error_handler(
     )
 
 
-async def database_error_handler(
-    request: Request, exc: DatabaseError
-) -> JSONResponse:
+async def database_error_handler(request: Request, exc: DatabaseError) -> JSONResponse:
     """Handle database errors."""
     request_id = getattr(request.state, "request_id", None)
 
@@ -277,7 +275,9 @@ async def database_error_handler(
     )
 
     # Don't expose database details in production
-    include_details = request.app.state.debug if hasattr(request.app.state, "debug") else False
+    include_details = (
+        request.app.state.debug if hasattr(request.app.state, "debug") else False
+    )
 
     error_message = "A database error occurred"
     if isinstance(exc, IntegrityError):
@@ -300,9 +300,7 @@ async def database_error_handler(
     )
 
 
-async def generic_exception_handler(
-    request: Request, exc: Exception
-) -> JSONResponse:
+async def generic_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Handle unexpected exceptions."""
     request_id = getattr(request.state, "request_id", None)
 
@@ -328,7 +326,9 @@ async def generic_exception_handler(
     )
 
     # Don't expose internal details in production
-    include_details = request.app.state.debug if hasattr(request.app.state, "debug") else False
+    include_details = (
+        request.app.state.debug if hasattr(request.app.state, "debug") else False
+    )
 
     response_data = {
         "error": {
@@ -367,4 +367,3 @@ def setup_error_handlers(app: FastAPI, debug: bool = False) -> None:
     app.add_exception_handler(DatabaseError, database_error_handler)
     app.add_exception_handler(IntegrityError, database_error_handler)
     app.add_exception_handler(Exception, generic_exception_handler)
-

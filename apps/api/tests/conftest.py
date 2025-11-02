@@ -42,9 +42,7 @@ else:
         poolclass=StaticPool,
     )
 
-TestingSessionLocal = sessionmaker(
-    autocommit=False, autoflush=False, bind=engine
-)
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 def _truncate_all_tables(db: Session) -> None:
@@ -70,12 +68,7 @@ def _truncate_all_tables(db: Session) -> None:
         # Build TRUNCATE command with all tables and CASCADE
         # CASCADE handles foreign key dependencies automatically
         table_names = ", ".join(f'"{table}"' for table in tables)
-        db.execute(
-            text(
-                f"TRUNCATE TABLE {table_names} "
-                "RESTART IDENTITY CASCADE;"
-            )
-        )
+        db.execute(text(f"TRUNCATE TABLE {table_names} " "RESTART IDENTITY CASCADE;"))
 
         # Re-enable triggers
         db.execute(text("SET session_replication_role = 'origin';"))
@@ -84,6 +77,7 @@ def _truncate_all_tables(db: Session) -> None:
         db.rollback()
         # If bulk truncation fails, log error but don't fail test
         import logging
+
         logger = logging.getLogger(__name__)
         logger.warning(
             f"Failed to truncate tables: {e}. "
@@ -188,10 +182,12 @@ def db() -> Generator[Session, None, None]:
 @pytest.fixture
 def client(db: Session) -> Generator[TestClient, None, None]:
     """Create a test client with dependency overrides."""
+
     def get_test_db():
         yield db
 
     from app.common.db import get_db
+
     app.dependency_overrides[get_db] = get_test_db
 
     with TestClient(app) as test_client:
@@ -350,16 +346,14 @@ def authenticated_user_token(test_user: User) -> str:
     # In real flow, this would go through login -> 2FA -> tokens
     from app.auth.utils import create_access_token
 
-    return create_access_token(
-        {"sub": str(test_user.id), "user_id": str(test_user.id)}
-    )
+    return create_access_token({"sub": str(test_user.id), "user_id": str(test_user.id)})
 
 
 @pytest.fixture
 def admin_token(admin_user: User) -> str:
     """Return access token for admin user."""
     from app.auth.utils import create_access_token
+
     return create_access_token(
         {"sub": str(admin_user.id), "user_id": str(admin_user.id)}
     )
-

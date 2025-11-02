@@ -206,7 +206,9 @@ def process_outbox_notification(notification_id: str) -> bool:
     db = SessionLocal()  # type: ignore
     try:
         notification = db.execute(
-            select(OutboxNotification).where(OutboxNotification.id == UUID(notification_id))
+            select(OutboxNotification).where(
+                OutboxNotification.id == UUID(notification_id)
+            )
         ).scalar_one_or_none()
 
         if not notification:
@@ -346,7 +348,9 @@ def _process_2fa_notification(
             return False
 
         subject = "Your 2FA code"
-        body = f"Your verification code is: {code}\n\nThis code will expire in 5 minutes."
+        body = (
+            f"Your verification code is: {code}\n\nThis code will expire in 5 minutes."
+        )
 
         return send_email(email, subject, body)
 
@@ -361,4 +365,3 @@ def _process_2fa_notification(
     else:
         logger.error(f"Unknown delivery method: {delivery_method}")
         return False
-

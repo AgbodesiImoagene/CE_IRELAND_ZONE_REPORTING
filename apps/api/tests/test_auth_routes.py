@@ -19,7 +19,7 @@ class TestLoginEndpoint:
         assert data["requires_2fa"] is True
         assert UUID(data["user_id"]) == test_user.id
 
-    def test_login_wrong_password(self, client: TestClient, test_user):
+    def test_login_wrong_password(self, client: TestClient):
         response = client.post(
             "/api/v1/auth/login",
             json={"email": "test@example.com", "password": "wrongpass"},
@@ -56,7 +56,7 @@ class Test2FAEndpoints:
         assert secret is not None
         assert secret.twofa_secret_hash is not None
 
-    def test_send_2fa_code_sms(self, client: TestClient, db, test_user):
+    def test_send_2fa_code_sms(self, client: TestClient, test_user):
         response = client.post(
             "/api/v1/auth/2fa/send",
             json={"user_id": str(test_user.id), "delivery_method": "sms"},
@@ -78,7 +78,7 @@ class Test2FAEndpoints:
         )
         assert response.status_code == 404
 
-    def test_verify_2fa_code_success(self, client: TestClient, db, test_user):
+    def test_verify_2fa_code_success(self, client: TestClient, test_user):
         # Send code first (capture it from console or mock)
         client.post(
             "/api/v1/auth/2fa/send",
@@ -93,7 +93,7 @@ class Test2FAEndpoints:
         )
         assert response.status_code == 401
 
-    def test_verify_2fa_code_invalid(self, client: TestClient, db, test_user):
+    def test_verify_2fa_code_invalid(self, client: TestClient, test_user):
         # Send code
         client.post(
             "/api/v1/auth/2fa/send",
@@ -112,6 +112,7 @@ class TestTokenRefresh:
     def test_refresh_token_success(self, client: TestClient, db, test_user):
         # Create a session manually
         from app.auth.service import AuthService
+
         _, refresh_token = AuthService.create_session(db, test_user.id)
 
         response = client.post(
@@ -163,6 +164,7 @@ class TestTokenRefresh:
 class TestLogout:
     def test_logout_success(self, client: TestClient, db, test_user):
         from app.auth.service import AuthService
+
         _, refresh_token = AuthService.create_session(db, test_user.id)
 
         response = client.post(
@@ -186,9 +188,7 @@ class TestLogout:
 
 
 class TestMeEndpoint:
-    def test_me_success(
-        self, client: TestClient, test_user, authenticated_user_token
-    ):
+    def test_me_success(self, client: TestClient, test_user, authenticated_user_token):
         auth_header = f"Bearer {authenticated_user_token}"
         response = client.get(
             "/api/v1/auth/me",
@@ -211,4 +211,3 @@ class TestMeEndpoint:
             headers={"Authorization": "Bearer invalid.token.here"},
         )
         assert response.status_code == 401
-

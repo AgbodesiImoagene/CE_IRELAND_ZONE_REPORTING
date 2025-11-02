@@ -34,9 +34,7 @@ class TestCreateInvitation:
 
         # Verify invitation was created in DB
         invitation = db.execute(
-            select(UserInvitation).where(
-                UserInvitation.email == "invite@example.com"
-            )
+            select(UserInvitation).where(UserInvitation.email == "invite@example.com")
         ).scalar_one_or_none()
         assert invitation is not None
 
@@ -172,7 +170,9 @@ class TestActivateUser:
         assert response.status_code == 400
         assert "Invalid or expired" in response.json()["detail"]
 
-    def test_activate_user_short_password(self, client: TestClient, db, admin_token, admin_user, test_role, test_org_unit):
+    def test_activate_user_short_password(
+        self, client: TestClient, db, admin_token, admin_user, test_role, test_org_unit
+    ):
         """Test activation fails with short password."""
         from app.users.service import UserProvisioningService
 
@@ -324,4 +324,3 @@ class TestCreateUserDirect:
             },
         )
         assert response.status_code == 422
-

@@ -46,7 +46,7 @@ class Test2FA:
     def test_verify_2fa_code_success(self, db, test_user):
         # Send code first
         AuthService.send_2fa_code(db, test_user.id, "email")
-        
+
         # Get the code from UserSecret (in real app, this would come from SMS/email)
         secret = db.get(UserSecret, test_user.id)
         # We can't easily test the actual code without mocking, so we'll test the hash directly
@@ -58,7 +58,7 @@ class Test2FA:
     def test_verify_2fa_code_invalid(self, db, test_user):
         # Send code
         AuthService.send_2fa_code(db, test_user.id, "email")
-        
+
         # Try invalid code
         valid = AuthService.verify_2fa_code(db, test_user.id, "000000")
         assert valid is False
@@ -72,7 +72,7 @@ class Test2FA:
 class TestSessions:
     def test_create_session(self, db, test_user):
         access_token, refresh_token = AuthService.create_session(db, test_user.id)
-        
+
         assert isinstance(access_token, str)
         assert isinstance(refresh_token, str)
         assert len(access_token) > 0
@@ -80,6 +80,7 @@ class TestSessions:
 
         # Check session in DB
         from sqlalchemy import select
+
         stmt = select(LoginSession).where(LoginSession.user_id == test_user.id)
         sessions = db.execute(stmt).scalars().all()
         assert len(list(sessions)) == 1
@@ -89,11 +90,11 @@ class TestSessions:
     def test_refresh_access_token_success(self, db, test_user):
         # Create session
         _, refresh_token = AuthService.create_session(db, test_user.id)
-        
+
         # Refresh
         result = AuthService.refresh_access_token(db, refresh_token)
         assert result is not None
-        
+
         access_token, new_refresh_token = result
         assert isinstance(access_token, str)
         assert isinstance(new_refresh_token, str)
@@ -105,7 +106,7 @@ class TestSessions:
 
     def test_revoke_session(self, db, test_user):
         _, refresh_token = AuthService.create_session(db, test_user.id)
-        
+
         # Revoke
         success = AuthService.revoke_session(db, refresh_token)
         assert success is True
@@ -116,9 +117,12 @@ class TestSessions:
 
 
 class TestUserInfo:
-    def test_get_user_permissions(self, db, test_user, test_role, test_permission, tenant_id):
+    def test_get_user_permissions(
+        self, db, test_user, test_role, test_permission, tenant_id
+    ):
         # Link permission to role
         from app.common.models import RolePermission
+
         rp = RolePermission(role_id=test_role.id, permission_id=test_permission.id)
         db.add(rp)
         db.commit()
@@ -128,10 +132,9 @@ class TestUserInfo:
 
     def test_get_user_info(self, db, test_user, tenant_id):
         info = AuthService.get_user_info(db, test_user.id, UUID(tenant_id))
-        
+
         assert info["id"] == test_user.id
         assert info["email"] == test_user.email
         assert info["is_active"] is True
         assert isinstance(info["roles"], list)
         assert isinstance(info["permissions"], list)
-

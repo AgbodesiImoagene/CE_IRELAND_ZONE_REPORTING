@@ -55,13 +55,18 @@ def ensure_permissions(db: Session, permissions: Set[str]) -> None:
     if to_create:
         db.execute(
             insert(Permission),
-            [{"id": uuid4(), "code": code, "description": None} for code in sorted(to_create)],
+            [
+                {"id": uuid4(), "code": code, "description": None}
+                for code in sorted(to_create)
+            ],
         )
 
 
 def ensure_roles(db: Session, tenant_id: str, roles: Set[str]) -> Dict[str, str]:
     tenant_uuid = UUID(tenant_id)
-    existing_rows = db.execute(select(Role.name, Role.id).where(Role.tenant_id == tenant_uuid)).all()
+    existing_rows = db.execute(
+        select(Role.name, Role.id).where(Role.tenant_id == tenant_uuid)
+    ).all()
     existing = {name: str(id_) for name, id_ in existing_rows}
     created: Dict[str, str] = {}
     for name in sorted(roles):
@@ -72,11 +77,17 @@ def ensure_roles(db: Session, tenant_id: str, roles: Set[str]) -> Dict[str, str]
         created[name] = str(rid)
     db.flush()
     # refresh mapping
-    rows = db.execute(select(Role.name, Role.id).where(Role.tenant_id == tenant_uuid)).all()
+    rows = db.execute(
+        select(Role.name, Role.id).where(Role.tenant_id == tenant_uuid)
+    ).all()
     return {name: str(id_) for name, id_ in rows}
 
 
-def ensure_role_permissions(db: Session, role_name_to_id: Dict[str, str], role_to_perms: Dict[str, Dict[str, bool]]):
+def ensure_role_permissions(
+    db: Session,
+    role_name_to_id: Dict[str, str],
+    role_to_perms: Dict[str, Dict[str, bool]],
+):
     # Fetch permission id map
     perm_rows = db.execute(select(Permission.code, Permission.id)).all()
     perm_code_to_id = {code: str(pid) for code, pid in perm_rows}
@@ -92,14 +103,19 @@ def ensure_role_permissions(db: Session, role_name_to_id: Dict[str, str], role_t
                     desired.add((rid, pid))
 
     # Load existing
-    existing_rows = db.execute(select(RolePermission.role_id, RolePermission.permission_id)).all()
+    existing_rows = db.execute(
+        select(RolePermission.role_id, RolePermission.permission_id)
+    ).all()
     existing = {(str(rid), str(pid)) for rid, pid in existing_rows}
 
     to_add = desired - existing
     if to_add:
         db.execute(
             insert(RolePermission),
-            [{"role_id": UUID(rid), "permission_id": UUID(pid)} for rid, pid in sorted(to_add)],
+            [
+                {"role_id": UUID(rid), "permission_id": UUID(pid)}
+                for rid, pid in sorted(to_add)
+            ],
         )
 
 
@@ -120,7 +136,9 @@ def main():
         role_name_to_id = ensure_roles(db, tenant_id, role_names)
         ensure_role_permissions(db, role_name_to_id, matrix)
         db.commit()
-    print(f"Seeded {len(role_names)} roles and {len(all_perms)} permissions from {csv_path}")
+    print(
+        f"Seeded {len(role_names)} roles and {len(all_perms)} permissions from {csv_path}"
+    )
 
 
 if __name__ == "__main__":

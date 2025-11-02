@@ -39,8 +39,7 @@ async def send_2fa_code(request: TwoFASendRequest, db: Session = Depends(get_db)
             detail="delivery_method must be 'sms' or 'email'",
         )
 
-    success = AuthService.send_2fa_code(
-        db, request.user_id, request.delivery_method)
+    success = AuthService.send_2fa_code(db, request.user_id, request.delivery_method)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -59,8 +58,7 @@ async def verify_2fa(request: TwoFAVerifyRequest, db: Session = Depends(get_db))
             detail="Invalid or expired 2FA code",
         )
 
-    access_token, refresh_token = AuthService.create_session(
-        db, request.user_id)
+    access_token, refresh_token = AuthService.create_session(db, request.user_id)
     return TokenResponse(access_token=access_token, refresh_token=refresh_token)
 
 

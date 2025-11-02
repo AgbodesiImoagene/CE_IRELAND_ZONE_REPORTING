@@ -118,7 +118,9 @@ class TestEnsurePermissions:
     def test_ensure_permissions_skips_existing(self, db):
         """Test that existing permissions are not duplicated."""
         # Create one permission manually
-        existing_perm = Permission(id=UUID("11111111-1111-1111-1111-111111111111"), code="perm1")
+        existing_perm = Permission(
+            id=UUID("11111111-1111-1111-1111-111111111111"), code="perm1"
+        )
         db.add(existing_perm)
         db.commit()
 
@@ -169,9 +171,11 @@ class TestEnsureRoles:
         assert "Guest" in role_name_to_id
 
         # Verify in database
-        roles = db.execute(
-            select(Role).where(Role.tenant_id == UUID(tenant_id))
-        ).scalars().all()
+        roles = (
+            db.execute(select(Role).where(Role.tenant_id == UUID(tenant_id)))
+            .scalars()
+            .all()
+        )
         assert len(roles) == 3
         role_names_db = {r.name for r in roles}
         assert role_names_db == role_names
@@ -194,9 +198,11 @@ class TestEnsureRoles:
         db.commit()
 
         # Should have 3 roles (1 existing + 2 new)
-        roles = db.execute(
-            select(Role).where(Role.tenant_id == UUID(tenant_id))
-        ).scalars().all()
+        roles = (
+            db.execute(select(Role).where(Role.tenant_id == UUID(tenant_id)))
+            .scalars()
+            .all()
+        )
         assert len(roles) == 3
         # Existing role ID should be preserved
         assert role_name_to_id["Admin"] == str(existing_role.id)
@@ -228,12 +234,16 @@ class TestEnsureRoles:
         db.commit()
 
         # Both should exist
-        roles1 = db.execute(
-            select(Role).where(Role.tenant_id == UUID(tenant1))
-        ).scalars().all()
-        roles2 = db.execute(
-            select(Role).where(Role.tenant_id == UUID(tenant2))
-        ).scalars().all()
+        roles1 = (
+            db.execute(select(Role).where(Role.tenant_id == UUID(tenant1)))
+            .scalars()
+            .all()
+        )
+        roles2 = (
+            db.execute(select(Role).where(Role.tenant_id == UUID(tenant2)))
+            .scalars()
+            .all()
+        )
 
         assert len(roles1) == 1
         assert len(roles2) == 1
@@ -248,14 +258,24 @@ class TestEnsureRolePermissions:
     def test_ensure_role_permissions_links_granted_only(self, db, tenant_id):
         """Test that only granted permissions are linked."""
         # Create permissions
-        perm1 = Permission(id=UUID("11111111-1111-1111-1111-111111111111"), code="perm1")
-        perm2 = Permission(id=UUID("22222222-2222-2222-2222-222222222222"), code="perm2")
-        perm3 = Permission(id=UUID("33333333-3333-3333-3333-333333333333"), code="perm3")
+        perm1 = Permission(
+            id=UUID("11111111-1111-1111-1111-111111111111"), code="perm1"
+        )
+        perm2 = Permission(
+            id=UUID("22222222-2222-2222-2222-222222222222"), code="perm2"
+        )
+        perm3 = Permission(
+            id=UUID("33333333-3333-3333-3333-333333333333"), code="perm3"
+        )
         db.add_all([perm1, perm2, perm3])
         db.commit()
 
         # Create role
-        role = Role(id=UUID("44444444-4444-4444-4444-444444444444"), tenant_id=UUID(tenant_id), name="Admin")
+        role = Role(
+            id=UUID("44444444-4444-4444-4444-444444444444"),
+            tenant_id=UUID(tenant_id),
+            name="Admin",
+        )
         db.add(role)
         db.commit()
 
@@ -273,9 +293,11 @@ class TestEnsureRolePermissions:
         db.commit()
 
         # Check only perm1 and perm3 are linked
-        links = db.execute(
-            select(RolePermission).where(RolePermission.role_id == role.id)
-        ).scalars().all()
+        links = (
+            db.execute(select(RolePermission).where(RolePermission.role_id == role.id))
+            .scalars()
+            .all()
+        )
 
         assert len(links) == 2
         perm_ids = {str(link.permission_id) for link in links}
@@ -287,7 +309,11 @@ class TestEnsureRolePermissions:
         """Test that existing links are not duplicated."""
         # Create permission and role
         perm = Permission(id=UUID("11111111-1111-1111-1111-111111111111"), code="perm1")
-        role = Role(id=UUID("22222222-2222-2222-2222-222222222222"), tenant_id=UUID(tenant_id), name="Admin")
+        role = Role(
+            id=UUID("22222222-2222-2222-2222-222222222222"),
+            tenant_id=UUID(tenant_id),
+            name="Admin",
+        )
         db.add_all([perm, role])
         db.commit()
 
@@ -304,16 +330,22 @@ class TestEnsureRolePermissions:
         db.commit()
 
         # Should still have exactly 1 link
-        links = db.execute(
-            select(RolePermission).where(RolePermission.role_id == role.id)
-        ).scalars().all()
+        links = (
+            db.execute(select(RolePermission).where(RolePermission.role_id == role.id))
+            .scalars()
+            .all()
+        )
         assert len(links) == 1
 
     def test_ensure_role_permissions_idempotent(self, db, tenant_id):
         """Test that running ensure_role_permissions twice is safe."""
         # Setup
         perm = Permission(id=UUID("11111111-1111-1111-1111-111111111111"), code="perm1")
-        role = Role(id=UUID("22222222-2222-2222-2222-222222222222"), tenant_id=UUID(tenant_id), name="Admin")
+        role = Role(
+            id=UUID("22222222-2222-2222-2222-222222222222"),
+            tenant_id=UUID(tenant_id),
+            name="Admin",
+        )
         db.add_all([perm, role])
         db.commit()
 
@@ -327,22 +359,36 @@ class TestEnsureRolePermissions:
         db.commit()
 
         # Should have exactly 1 link
-        links = db.execute(
-            select(RolePermission).where(RolePermission.role_id == role.id)
-        ).scalars().all()
+        links = (
+            db.execute(select(RolePermission).where(RolePermission.role_id == role.id))
+            .scalars()
+            .all()
+        )
         assert len(links) == 1
 
     def test_ensure_role_permissions_multiple_roles(self, db, tenant_id):
         """Test linking permissions for multiple roles."""
         # Create permissions
-        perm1 = Permission(id=UUID("11111111-1111-1111-1111-111111111111"), code="perm1")
-        perm2 = Permission(id=UUID("22222222-2222-2222-2222-222222222222"), code="perm2")
+        perm1 = Permission(
+            id=UUID("11111111-1111-1111-1111-111111111111"), code="perm1"
+        )
+        perm2 = Permission(
+            id=UUID("22222222-2222-2222-2222-222222222222"), code="perm2"
+        )
         db.add_all([perm1, perm2])
         db.commit()
 
         # Create roles
-        admin_role = Role(id=UUID("33333333-3333-3333-3333-333333333333"), tenant_id=UUID(tenant_id), name="Admin")
-        user_role = Role(id=UUID("44444444-4444-4444-4444-444444444444"), tenant_id=UUID(tenant_id), name="User")
+        admin_role = Role(
+            id=UUID("33333333-3333-3333-3333-333333333333"),
+            tenant_id=UUID(tenant_id),
+            name="Admin",
+        )
+        user_role = Role(
+            id=UUID("44444444-4444-4444-4444-444444444444"),
+            tenant_id=UUID(tenant_id),
+            name="User",
+        )
         db.add_all([admin_role, user_role])
         db.commit()
 
@@ -360,15 +406,23 @@ class TestEnsureRolePermissions:
         db.commit()
 
         # Check Admin has both permissions
-        admin_links = db.execute(
-            select(RolePermission).where(RolePermission.role_id == admin_role.id)
-        ).scalars().all()
+        admin_links = (
+            db.execute(
+                select(RolePermission).where(RolePermission.role_id == admin_role.id)
+            )
+            .scalars()
+            .all()
+        )
         assert len(admin_links) == 2
 
         # Check User has only perm1
-        user_links = db.execute(
-            select(RolePermission).where(RolePermission.role_id == user_role.id)
-        ).scalars().all()
+        user_links = (
+            db.execute(
+                select(RolePermission).where(RolePermission.role_id == user_role.id)
+            )
+            .scalars()
+            .all()
+        )
         assert len(user_links) == 1
         assert user_links[0].permission_id == perm1.id
 
@@ -400,6 +454,7 @@ class TestFindCsvPath:
         monkeypatch.delenv("PERMISSIONS_CSV_PATH", raising=False)
         # Patch CSV_CANDIDATE_PATHS to point to non-existent files
         from app.scripts import seed_permissions
+
         original_paths = seed_permissions.CSV_CANDIDATE_PATHS
         non_existent = tmp_path / "nonexistent" / "permissions_matrix.csv"
         seed_permissions.CSV_CANDIDATE_PATHS = [non_existent]
@@ -463,25 +518,35 @@ class TestFullIntegration:
         perm_codes = {p.code for p in permissions}
         assert perm_codes == {"users.create", "users.delete", "users.read"}
 
-        roles = db.execute(
-            select(Role).where(Role.tenant_id == UUID(tenant_id))
-        ).scalars().all()
+        roles = (
+            db.execute(select(Role).where(Role.tenant_id == UUID(tenant_id)))
+            .scalars()
+            .all()
+        )
         assert len(roles) == 2  # Admin, User
         role_names_db = {r.name for r in roles}
         assert role_names_db == {"Admin", "User"}
 
         # Check Admin has 2 permissions
         admin_role = next(r for r in roles if r.name == "Admin")
-        admin_links = db.execute(
-            select(RolePermission).where(RolePermission.role_id == admin_role.id)
-        ).scalars().all()
+        admin_links = (
+            db.execute(
+                select(RolePermission).where(RolePermission.role_id == admin_role.id)
+            )
+            .scalars()
+            .all()
+        )
         assert len(admin_links) == 2
 
         # Check User has 1 permission
         user_role = next(r for r in roles if r.name == "User")
-        user_links = db.execute(
-            select(RolePermission).where(RolePermission.role_id == user_role.id)
-        ).scalars().all()
+        user_links = (
+            db.execute(
+                select(RolePermission).where(RolePermission.role_id == user_role.id)
+            )
+            .scalars()
+            .all()
+        )
         assert len(user_links) == 1
 
     def test_full_seed_idempotent(self, db, tenant_id, tmp_path):
@@ -513,12 +578,13 @@ class TestFullIntegration:
         permissions = db.execute(select(Permission)).scalars().all()
         assert len(permissions) == 2
 
-        roles = db.execute(
-            select(Role).where(Role.tenant_id == UUID(tenant_id))
-        ).scalars().all()
+        roles = (
+            db.execute(select(Role).where(Role.tenant_id == UUID(tenant_id)))
+            .scalars()
+            .all()
+        )
         assert len(roles) == 2
 
         # Count total links
         all_links = db.execute(select(RolePermission)).scalars().all()
         assert len(all_links) == 2  # One per role
-
