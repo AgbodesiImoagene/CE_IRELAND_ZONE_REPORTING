@@ -16,7 +16,7 @@ from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 from sqlalchemy.exc import DatabaseError, IntegrityError
 
-from app.core.metrics import emit_error
+from app.core.otel_metrics import emit_error
 
 logger = logging.getLogger(__name__)
 

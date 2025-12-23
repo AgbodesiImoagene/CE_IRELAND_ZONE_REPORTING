@@ -566,3 +566,257 @@ class TestNotificationRetries:
         assert updated.delivery_state == "sent"
         assert updated.sent_at is not None
         assert updated.last_error is None
+
+
+class TestRunWorker:
+    """Test RQ worker CLI functionality."""
+
+    def test_run_worker_default_queue(self):
+        """Test running worker with default queue."""
+        from app.jobs.cli import run_worker
+        from unittest.mock import Mock, patch
+
+        mock_worker = Mock()
+        mock_worker.work = Mock()
+
+        with patch("app.jobs.cli.get_redis_connection") as mock_conn:
+            with patch("app.jobs.cli.Worker", return_value=mock_worker) as mock_worker_class:
+                run_worker()
+
+        # Verify Worker was created with default queue
+        mock_worker_class.assert_called_once()
+        call_args = mock_worker_class.call_args
+        assert call_args[0][0] == ["default"]  # queues argument
+        assert call_args[1]["connection"] == mock_conn.return_value
+        mock_worker.work.assert_called_once()
+
+    def test_run_worker_custom_queues(self):
+        """Test running worker with custom queues."""
+        from app.jobs.cli import run_worker
+        from unittest.mock import Mock, patch
+
+        mock_worker = Mock()
+        mock_worker.work = Mock()
+
+        custom_queues = ["emails", "sms"]
+
+        with patch("app.jobs.cli.get_redis_connection") as mock_conn:
+            with patch("app.jobs.cli.Worker", return_value=mock_worker) as mock_worker_class:
+                run_worker(queues=custom_queues)
+
+        # Verify Worker was created with custom queues
+        mock_worker_class.assert_called_once()
+        call_args = mock_worker_class.call_args
+        assert call_args[0][0] == custom_queues
+        assert call_args[1]["connection"] == mock_conn.return_value
+        mock_worker.work.assert_called_once()
+
+    def test_run_worker_none_queues(self):
+        """Test running worker with None queues (should default)."""
+        from app.jobs.cli import run_worker
+        from unittest.mock import Mock, patch
+
+        mock_worker = Mock()
+        mock_worker.work = Mock()
+
+        with patch("app.jobs.cli.get_redis_connection") as mock_conn:
+            with patch("app.jobs.cli.Worker", return_value=mock_worker) as mock_worker_class:
+                run_worker(queues=None)
+
+        # Verify Worker was created with default queue
+        mock_worker_class.assert_called_once()
+        call_args = mock_worker_class.call_args
+        assert call_args[0][0] == ["default"]
+        assert call_args[1]["connection"] == mock_conn.return_value
+        mock_worker.work.assert_called_once()
+
+
+class TestProcessOutboxNotifications:
+    """Test outbox notification processor."""
+
+    def test_process_outbox_notifications_with_pending_notifications(
+        self, db: Session
+    ):
+        """Test processing pending notifications."""
+        from app.jobs.outbox_processor import process_outbox_notifications
+        from unittest.mock import Mock, patch
+
+        # Create pending notifications
+        notification1 = OutboxNotification(
+            id=uuid4(),
+            type="2fa_code",
+            payload={
+                "email": "user1@example.com",
+                "code": "123456",
+                "delivery_method": "email",
+            },
+            delivery_state="pending",
+        )
+        notification2 = OutboxNotification(
+            id=uuid4(),
+            type="user_invitation",
+            payload={"email": "invited@example.com", "token": "token"},
+            delivery_state="pending",
+        )
+        db.add(notification1)
+        db.add(notification2)
+        db.commit()
+
+        mock_job = Mock()
+        mock_job.id = str(notification1.id)
+
+        with patch("app.jobs.outbox_processor.SessionLocal", return_value=db):
+            with patch.object(db, "close"):  # Prevent closing test session
+                with patch("app.jobs.outbox_processor.emails_queue") as mock_queue:
+                    mock_queue.enqueue.return_value = mock_job
+                    with patch("app.jobs.outbox_processor.logger"):
+                        # Process with max_iterations=1 to avoid infinite loop
+                        process_outbox_notifications(
+                            batch_size=10, max_iterations=1
+                        )
+
+        # Verify notifications were enqueued
+        assert mock_queue.enqueue.call_count == 2
+
+    def test_process_outbox_notifications_no_pending_notifications(self, db: Session):
+        """Test processing when no pending notifications exist."""
+        from app.jobs.outbox_processor import process_outbox_notifications
+        from unittest.mock import patch
+        import time
+
+        with patch("app.jobs.outbox_processor.SessionLocal", return_value=db):
+            with patch.object(db, "close"):
+                with patch("app.jobs.outbox_processor.logger"):
+                    with patch("time.sleep"):  # Speed up test
+                        # Process with max_iterations=1
+                        process_outbox_notifications(
+                            batch_size=10, max_iterations=1
+                        )
+
+        # Should complete without errors
+
+    def test_process_outbox_notifications_sms_queue(self, db: Session):
+        """Test that SMS notifications go to SMS queue."""
+        from app.jobs.outbox_processor import process_outbox_notifications
+        from unittest.mock import Mock, patch
+
+        notification = OutboxNotification(
+            id=uuid4(),
+            type="2fa_code",
+            payload={
+                "phone": "+1234567890",
+                "code": "123456",
+                "delivery_method": "sms",
+            },
+            delivery_state="pending",
+        )
+        db.add(notification)
+        db.commit()
+
+        mock_job = Mock()
+        mock_job.id = str(notification.id)
+
+        with patch("app.jobs.outbox_processor.SessionLocal", return_value=db):
+            with patch.object(db, "close"):
+                with patch("app.jobs.outbox_processor.sms_queue") as mock_sms_queue:
+                    with patch("app.jobs.outbox_processor.emails_queue"):
+                        mock_sms_queue.enqueue.return_value = mock_job
+                        with patch("app.jobs.outbox_processor.logger"):
+                            process_outbox_notifications(
+                                batch_size=10, max_iterations=1
+                            )
+
+        # Verify SMS queue was used
+        mock_sms_queue.enqueue.assert_called_once()
+
+    def test_process_outbox_notifications_enqueue_failure(self, db: Session):
+        """Test handling of enqueue failures."""
+        from app.jobs.outbox_processor import process_outbox_notifications
+        from unittest.mock import patch
+
+        notification = OutboxNotification(
+            id=uuid4(),
+            type="2fa_code",
+            payload={"email": "user@example.com", "code": "123456"},
+            delivery_state="pending",
+        )
+        db.add(notification)
+        db.commit()
+
+        with patch("app.jobs.outbox_processor.SessionLocal", return_value=db):
+            with patch.object(db, "close"):
+                with patch("app.jobs.outbox_processor.emails_queue") as mock_queue:
+                    mock_queue.enqueue.side_effect = Exception("Queue error")
+                    with patch("app.jobs.outbox_processor.logger"):
+                        process_outbox_notifications(
+                            batch_size=10, max_iterations=1
+                        )
+
+        # Verify notification was marked as failed
+        db.expire_all()
+        updated = db.query(OutboxNotification).filter_by(id=notification.id).first()
+        assert updated is not None
+        assert updated.delivery_state == "failed"
+        assert "Failed to enqueue" in str(updated.last_error)
+
+    def test_process_outbox_notifications_database_error(self, db: Session):
+        """Test handling of database errors."""
+        from app.jobs.outbox_processor import process_outbox_notifications
+        from unittest.mock import patch, MagicMock
+
+        mock_db = MagicMock()
+        mock_db.execute.side_effect = Exception("Database error")
+
+        with patch("app.jobs.outbox_processor.SessionLocal", return_value=mock_db):
+            with patch("app.jobs.outbox_processor.logger") as mock_logger:
+                # Should handle error gracefully
+                process_outbox_notifications(batch_size=10, max_iterations=1)
+
+        # Verify error was logged
+        mock_logger.error.assert_called()
+
+    def test_process_outbox_notifications_batch_size(self, db: Session):
+        """Test that batch_size limits number of notifications processed."""
+        from app.jobs.outbox_processor import process_outbox_notifications
+        from unittest.mock import Mock, patch
+
+        # Create more notifications than batch_size
+        for i in range(15):
+            notification = OutboxNotification(
+                id=uuid4(),
+                type="2fa_code",
+                payload={"email": f"user{i}@example.com", "code": "123456"},
+                delivery_state="pending",
+            )
+            db.add(notification)
+        db.commit()
+
+        mock_job = Mock()
+
+        with patch("app.jobs.outbox_processor.SessionLocal", return_value=db):
+            with patch.object(db, "close"):
+                with patch("app.jobs.outbox_processor.emails_queue") as mock_queue:
+                    mock_queue.enqueue.return_value = mock_job
+                    with patch("app.jobs.outbox_processor.logger"):
+                        process_outbox_notifications(
+                            batch_size=5, max_iterations=1
+                        )
+
+        # Should only process batch_size notifications
+        assert mock_queue.enqueue.call_count == 5
+
+    def test_process_outbox_notifications_max_iterations(self, db: Session):
+        """Test that max_iterations limits processing loops."""
+        from app.jobs.outbox_processor import process_outbox_notifications
+        from unittest.mock import patch
+
+        with patch("app.jobs.outbox_processor.SessionLocal", return_value=db):
+            with patch.object(db, "close"):
+                with patch("app.jobs.outbox_processor.logger"):
+                    with patch("time.sleep"):  # Speed up test
+                        # Should only run max_iterations times
+                        process_outbox_notifications(
+                            batch_size=10, max_iterations=3
+                        )
+
+        # Should complete after 3 iterations

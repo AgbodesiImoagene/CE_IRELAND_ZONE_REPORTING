@@ -9,7 +9,7 @@ import logging
 import time
 from typing import Any
 
-from app.core.metrics import emit_redis_operation
+from app.core.otel_metrics import emit_redis_operation
 
 logger = logging.getLogger(__name__)
 

@@ -13,6 +13,7 @@ from fastapi.responses import JSONResponse
 
 from app.core.config import settings
 from app.core.errors import setup_error_handlers
+from app.core.otel_setup import setup_opentelemetry
 from app.core.middleware import (
     RequestIDMiddleware,
     SecurityHeadersMiddleware,
@@ -24,17 +25,21 @@ from app.core.middleware import (
 )
 from app.auth.routes import router as auth_router
 from app.auth.oauth_routes import router as oauth_router
+from app.iam.routes import router as iam_router
 from app.users.routes import router as users_router
+from app.registry.routes import router as registry_router
+from app.finance.routes import router as finance_router
+from app.cells.routes import router as cells_router
 
 # API prefix constant
 API_PREFIX = "/api/v1"
 
 
 def setup_logging() -> None:
-    """Configure structured JSON logging for CloudWatch compatibility."""
+    """Configure structured JSON logging with OpenTelemetry export."""
     log_level = getattr(logging, settings.log_level.upper(), logging.INFO)
 
-    # JSON format for CloudWatch Logs
+    # JSON format for structured logging
     class JSONFormatter(logging.Formatter):
         def format(self, record):
             log_data = {
@@ -66,14 +71,19 @@ def setup_logging() -> None:
             datefmt="%Y-%m-%d %H:%M:%S",
         )
 
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(formatter)
+    # Always add stdout handler for local viewing
+    stdout_handler = logging.StreamHandler(sys.stdout)
+    stdout_handler.setFormatter(formatter)
 
     root_logger = logging.getLogger()
     root_logger.setLevel(log_level)
     # Clear existing handlers to avoid duplicates
     root_logger.handlers = []
-    root_logger.addHandler(handler)
+    root_logger.addHandler(stdout_handler)
+
+    # Add OpenTelemetry logging handler if endpoint is configured
+    # Logs will be sent via OTLP after OpenTelemetry is initialized
+    # The LoggingInstrumentor will be set up in otel_setup.py
 
     # Set levels for noisy libraries
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
@@ -82,6 +92,9 @@ def setup_logging() -> None:
 
 # Setup logging before creating app
 setup_logging()
+
+# Setup OpenTelemetry (must be done before app creation)
+setup_opentelemetry()
 
 app = FastAPI(
     title=f"{settings.tenant_name} Reporting Platform API",
@@ -120,7 +133,11 @@ if settings.enable_gzip:
 # Include routers
 app.include_router(auth_router, prefix=API_PREFIX)
 app.include_router(oauth_router, prefix=API_PREFIX)
+app.include_router(iam_router, prefix=API_PREFIX)
 app.include_router(users_router, prefix=API_PREFIX)
+app.include_router(registry_router, prefix=API_PREFIX)
+app.include_router(finance_router, prefix=API_PREFIX)
+app.include_router(cells_router, prefix=API_PREFIX)
 
 
 @app.get("/health")

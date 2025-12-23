@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.common.db import SessionLocal
-from app.common.models import OutboxNotification
+from app.common.models import OutboxNotification, UserSecret, User
 from app.core.config import settings
 from app.jobs.queue import emails_queue, sms_queue
 
@@ -225,6 +225,23 @@ def process_outbox_notification(notification_id: str) -> bool:
             success = _process_invitation_notification(db, notification)
         elif notification.type == "2fa_code":
             success = _process_2fa_notification(db, notification)
+            if success:
+                # Look up user by email from payload to update UserSecret
+                payload = notification.payload
+                email = payload.get("email")
+                if email:
+                    user = db.execute(
+                        select(User).where(User.email == email.lower())
+                    ).scalar_one_or_none()
+                    if user:
+                        secret = db.execute(
+                            select(UserSecret).where(
+                                UserSecret.user_id == user.id
+                            )
+                        ).scalar_one_or_none()
+                        if secret:
+                            secret.sent_at = datetime.now(timezone.utc)
+                            db.commit()
         else:
             logger.warning(f"Unknown notification type: {notification.type}")
             notification.delivery_state = "failed"

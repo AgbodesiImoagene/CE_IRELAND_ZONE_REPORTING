@@ -239,7 +239,7 @@ class TestOAuthIntegration:
         assert user2.id == user.id
         assert is_new2 is False
 
-    def test_facebook_flow_integration(self, db, tenant_id, test_user):
+    def test_facebook_flow_integration(self, db, test_user):
         # Test linking Facebook to existing user
         provider = "facebook"
         provider_user_id = "fb_integration_test"

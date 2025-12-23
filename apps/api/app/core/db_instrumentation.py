@@ -15,7 +15,7 @@ from sqlalchemy import event
 from sqlalchemy.engine import Engine
 from sqlalchemy.engine.interfaces import DBAPICursor
 
-from app.core.metrics import emit_database_query
+from app.core.otel_metrics import emit_database_query
 
 logger = logging.getLogger(__name__)
 

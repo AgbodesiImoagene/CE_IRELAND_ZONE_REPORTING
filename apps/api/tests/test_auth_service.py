@@ -7,13 +7,13 @@ from app.common.models import UserSecret, LoginSession
 
 
 class TestAuthenticateUser:
-    def test_authenticate_success(self, db, tenant_id, test_user):
+    def test_authenticate_success(self, db, test_user):
         user = AuthService.authenticate_user(db, "test@example.com", "testpass123")
         assert user is not None
         assert user.id == test_user.id
         assert user.email == "test@example.com"
 
-    def test_authenticate_wrong_password(self, db, tenant_id, test_user):
+    def test_authenticate_wrong_password(self, db):
         user = AuthService.authenticate_user(db, "test@example.com", "wrongpass")
         assert user is None
 
@@ -21,7 +21,7 @@ class TestAuthenticateUser:
         user = AuthService.authenticate_user(db, "nonexistent@example.com", "password")
         assert user is None
 
-    def test_authenticate_inactive_user(self, db, tenant_id, test_user):
+    def test_authenticate_inactive_user(self, db, test_user):
         test_user.is_active = False
         db.commit()
         user = AuthService.authenticate_user(db, "test@example.com", "testpass123")

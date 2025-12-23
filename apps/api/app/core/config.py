@@ -52,9 +52,11 @@ class Settings(BaseSettings):
     cors_origins: str = ""  # Comma-separated list of allowed origins
     enable_gzip: bool = True
 
-    # Metrics configuration (EMF)
-    enable_metrics: bool = True  # Enable CloudWatch EMF metrics
-    metrics_namespace: str = ""  # CloudWatch namespace (defaults to tenant_name)
+    # Metrics configuration (OpenTelemetry)
+    enable_metrics: bool = True  # Enable OpenTelemetry metrics
+    metrics_namespace: str = ""  # OpenTelemetry meter name (defaults to tenant_name)
+    otel_service_name: str = ""  # OpenTelemetry service name (defaults to tenant_name)
+    otel_exporter_otlp_endpoint: str = ""  # OTLP endpoint (e.g., http://localhost:4317)
 
     # Rate limiting configuration
     enable_rate_limiting: bool = False  # Enable rate limiting

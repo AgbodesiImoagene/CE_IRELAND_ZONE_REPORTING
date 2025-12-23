@@ -1,0 +1,33 @@
+[run]
+source = app
+omit =
+    */tests/*
+    */alembic/*
+    */migrations/*
+    */__pycache__/*
+    */venv/*
+    */.venv/*
+    */node_modules/*
+    */conftest.py
+
+[report]
+precision = 2
+show_missing = True
+skip_covered = False
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise AssertionError
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    if TYPE_CHECKING:
+    @abstractmethod
+    class .*\bProtocol\):
+    @(abc\.)?abstractmethod
+
+[html]
+directory = htmlcov
+
+[xml]
+output = coverage.xml
+

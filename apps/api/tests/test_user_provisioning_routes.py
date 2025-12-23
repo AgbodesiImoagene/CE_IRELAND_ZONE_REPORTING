@@ -1,4 +1,4 @@
-"""Tests for user provisioning routes."""
+"""Tests for user provisioning routes (invitations, activation, direct creation)."""
 
 from __future__ import annotations
 
@@ -88,7 +88,6 @@ class TestCreateInvitation:
     def test_create_invitation_user_exists(
         self,
         client: TestClient,
-        db,
         admin_token,
         test_role,
         test_org_unit,
@@ -112,7 +111,7 @@ class TestCreateInvitation:
 
 class TestActivateUser:
     def test_activate_user_success(
-        self, client: TestClient, db, admin_token, admin_user, test_role, test_org_unit
+        self, client: TestClient, db, admin_user, test_role, test_org_unit
     ):
         """Test successful user activation via API."""
         from app.users.service import UserProvisioningService
@@ -171,7 +170,7 @@ class TestActivateUser:
         assert "Invalid or expired" in response.json()["detail"]
 
     def test_activate_user_short_password(
-        self, client: TestClient, db, admin_token, admin_user, test_role, test_org_unit
+        self, client: TestClient, db, admin_user, test_role, test_org_unit
     ):
         """Test activation fails with short password."""
         from app.users.service import UserProvisioningService
@@ -324,3 +323,199 @@ class TestCreateUserDirect:
             },
         )
         assert response.status_code == 422
+
+
+
+class TestListInvitations:
+    def test_list_invitations_success(
+        self, client: TestClient, admin_token, admin_user, test_role, test_org_unit, db
+    ):
+        """Test listing invitations."""
+        from app.users.service import UserProvisioningService
+        from uuid import UUID
+
+        # Create an invitation
+        UserProvisioningService.create_invitation(
+            db=db,
+            creator_id=admin_user.id,
+            tenant_id=UUID("12345678-1234-5678-1234-567812345678"),
+            email="list@example.com",
+            role_id=test_role.id,
+            org_unit_id=test_org_unit.id,
+            scope_type="self",
+            custom_org_unit_ids=None,
+            twofa_delivery="email",
+        )
+
+        response = client.get(
+            "/api/v1/users/invitations",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "items" in data
+        assert "total" in data
+
+    def test_list_invitations_with_filters(
+        self, client: TestClient, admin_token, admin_user, test_role, test_org_unit, db
+    ):
+        """Test listing invitations with filters."""
+        from app.users.service import UserProvisioningService
+        from uuid import UUID
+
+        # Create invitation
+        UserProvisioningService.create_invitation(
+            db=db,
+            creator_id=admin_user.id,
+            tenant_id=UUID("12345678-1234-5678-1234-567812345678"),
+            email="filter@example.com",
+            role_id=test_role.id,
+            org_unit_id=test_org_unit.id,
+            scope_type="self",
+            custom_org_unit_ids=None,
+            twofa_delivery="email",
+        )
+
+        response = client.get(
+            "/api/v1/users/invitations",
+            headers={"Authorization": f"Bearer {admin_token}"},
+            params={"email": "filter", "status": "pending"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "items" in data
+
+    def test_list_invitations_unauthorized(self, client: TestClient):
+        """Test listing invitations without auth."""
+        response = client.get("/api/v1/users/invitations")
+        assert response.status_code == 401
+
+
+class TestGetInvitation:
+    def test_get_invitation_success(
+        self, client: TestClient, admin_token, admin_user, test_role, test_org_unit, db
+    ):
+        """Test getting an invitation."""
+        from app.users.service import UserProvisioningService
+        from uuid import UUID
+
+        invitation = UserProvisioningService.create_invitation(
+            db=db,
+            creator_id=admin_user.id,
+            tenant_id=UUID("12345678-1234-5678-1234-567812345678"),
+            email="get@example.com",
+            role_id=test_role.id,
+            org_unit_id=test_org_unit.id,
+            scope_type="self",
+            custom_org_unit_ids=None,
+            twofa_delivery="email",
+        )
+
+        response = client.get(
+            f"/api/v1/users/invitations/{invitation.id}",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["id"] == str(invitation.id)
+        assert data["email"] == invitation.email
+
+    def test_get_invitation_not_found(
+        self, client: TestClient, admin_token
+    ):
+        """Test getting non-existent invitation."""
+        from uuid import uuid4
+        fake_id = uuid4()
+        response = client.get(
+            f"/api/v1/users/invitations/{fake_id}",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        assert response.status_code == 404
+
+
+class TestResendInvitation:
+    def test_resend_invitation_success(
+        self, client: TestClient, admin_token, admin_user, test_role, test_org_unit, db
+    ):
+        """Test resending an invitation."""
+        from app.users.service import UserProvisioningService
+        from uuid import UUID
+
+        invitation = UserProvisioningService.create_invitation(
+            db=db,
+            creator_id=admin_user.id,
+            tenant_id=UUID("12345678-1234-5678-1234-567812345678"),
+            email="resend@example.com",
+            role_id=test_role.id,
+            org_unit_id=test_org_unit.id,
+            scope_type="self",
+            custom_org_unit_ids=None,
+            twofa_delivery="email",
+        )
+
+        response = client.post(
+            f"/api/v1/users/invitations/{invitation.id}/resend",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["id"] == str(invitation.id)
+
+    def test_resend_invitation_not_found(
+        self, client: TestClient, admin_token
+    ):
+        """Test resending non-existent invitation."""
+        from uuid import uuid4
+        fake_id = uuid4()
+        response = client.post(
+            f"/api/v1/users/invitations/{fake_id}/resend",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        assert response.status_code == 400
+
+
+class TestCancelInvitation:
+    def test_cancel_invitation_success(
+        self, client: TestClient, admin_token, admin_user, test_role, test_org_unit, db
+    ):
+        """Test cancelling an invitation."""
+        from app.users.service import UserProvisioningService
+        from uuid import UUID
+
+        invitation = UserProvisioningService.create_invitation(
+            db=db,
+            creator_id=admin_user.id,
+            tenant_id=UUID("12345678-1234-5678-1234-567812345678"),
+            email="cancel@example.com",
+            role_id=test_role.id,
+            org_unit_id=test_org_unit.id,
+            scope_type="self",
+            custom_org_unit_ids=None,
+            twofa_delivery="email",
+        )
+
+        response = client.delete(
+            f"/api/v1/users/invitations/{invitation.id}",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        assert response.status_code == 204
+
+        # Verify cancelled
+        from sqlalchemy import select
+        from app.common.models import UserInvitation
+        cancelled = db.execute(
+            select(UserInvitation).where(UserInvitation.id == invitation.id)
+        ).scalar_one()
+        assert cancelled.used_at is not None
+
+    def test_cancel_invitation_not_found(
+        self, client: TestClient, admin_token
+    ):
+        """Test cancelling non-existent invitation."""
+        from uuid import uuid4
+        fake_id = uuid4()
+        response = client.delete(
+            f"/api/v1/users/invitations/{fake_id}",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        assert response.status_code == 400

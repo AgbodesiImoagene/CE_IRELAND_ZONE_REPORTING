@@ -169,3 +169,74 @@ class TestRLSIntegration:
         # Should still work after clearing
         found_after = db.get(User, user_id)
         assert found_after is not None
+
+    def test_set_rls_context_with_empty_permissions(self, db: Session, tenant_id: str):
+        """Test setting RLS context with empty permissions list."""
+        tenant_uuid = UUID(tenant_id)
+        user_id = uuid4()
+
+        set_rls_context(
+            db=db,
+            tenant_id=tenant_uuid,
+            user_id=user_id,
+            permissions=[],
+        )
+
+        assert True
+
+    def test_clear_rls_context_handles_errors(self, db: Session, monkeypatch):
+        """Test that clear_rls_context handles errors gracefully."""
+        from unittest.mock import Mock, patch
+
+        # Mock execute to raise an error
+        with patch.object(db, "execute", side_effect=Exception("DB error")):
+            # Should not raise, should handle error gracefully
+            from app.core.rls import clear_rls_context
+            clear_rls_context(db)
+
+        assert True
+
+    def test_is_postgresql_handles_attribute_error(self):
+        """Test that _is_postgresql handles AttributeError gracefully."""
+        from app.core.rls import _is_postgresql
+
+        # Create a mock session that raises AttributeError
+        class MockSession:
+            @property
+            def bind(self):
+                raise AttributeError("No bind")
+
+        mock_db = MockSession()
+        result = _is_postgresql(mock_db)
+        assert result is False
+
+    def test_is_postgresql_handles_type_error(self):
+        """Test that _is_postgresql handles TypeError gracefully."""
+        from app.core.rls import _is_postgresql
+
+        # Create a mock session that raises TypeError
+        class MockSession:
+            @property
+            def bind(self):
+                raise TypeError("Type error")
+
+        mock_db = MockSession()
+        result = _is_postgresql(mock_db)
+        assert result is False
+
+    def test_set_rls_context_with_special_characters_in_permissions(
+        self, db: Session, tenant_id: str
+    ):
+        """Test setting RLS context with special characters in permissions."""
+        tenant_uuid = UUID(tenant_id)
+        user_id = uuid4()
+        permissions = ["test.permission", "another_permission", "permission-with-dash"]
+
+        set_rls_context(
+            db=db,
+            tenant_id=tenant_uuid,
+            user_id=user_id,
+            permissions=permissions,
+        )
+
+        assert True

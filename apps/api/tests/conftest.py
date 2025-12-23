@@ -278,7 +278,7 @@ def test_user(
 
 @pytest.fixture
 def admin_role(db: Session, tenant_id: str) -> Role:
-    """Create an admin role with system.users.create permission."""
+    """Create an admin role with user management permissions."""
     from app.common.models import Permission, RolePermission
 
     role = Role(
@@ -289,21 +289,57 @@ def admin_role(db: Session, tenant_id: str) -> Role:
     db.add(role)
     db.flush()
 
-    # Create permission
-    perm = Permission(
-        id=uuid4(),
-        code="system.users.create",
-        description="Create users",
-    )
-    db.add(perm)
+    # Create permissions
+    permissions = [
+        Permission(
+            id=uuid4(),
+            code="system.users.create",
+            description="Create users",
+        ),
+        Permission(
+            id=uuid4(),
+            code="system.users.read",
+            description="Read users",
+        ),
+        Permission(
+            id=uuid4(),
+            code="system.users.update",
+            description="Update users",
+        ),
+        Permission(
+            id=uuid4(),
+            code="system.users.disable",
+            description="Disable/enable users",
+        ),
+        Permission(
+            id=uuid4(),
+            code="system.users.reset_password",
+            description="Reset user passwords",
+        ),
+        Permission(
+            id=uuid4(),
+            code="system.users.assign",
+            description="Assign org scopes",
+        ),
+        Permission(
+            id=uuid4(),
+            code="system.audit.view",
+            description="View audit logs",
+        ),
+    ]
+
+    for perm in permissions:
+        db.add(perm)
     db.flush()
 
-    # Link permission to role
-    role_perm = RolePermission(
-        role_id=role.id,
-        permission_id=perm.id,
-    )
-    db.add(role_perm)
+    # Link permissions to role
+    for perm in permissions:
+        role_perm = RolePermission(
+            role_id=role.id,
+            permission_id=perm.id,
+        )
+        db.add(role_perm)
+
     db.commit()
     db.refresh(role)
     return role
@@ -356,4 +392,128 @@ def admin_token(admin_user: User) -> str:
 
     return create_access_token(
         {"sub": str(admin_user.id), "user_id": str(admin_user.id)}
+    )
+
+
+@pytest.fixture
+def iam_user(db, tenant_id, test_org_unit):
+    """Create a user with IAM permissions."""
+    from app.common.models import Permission, RolePermission, Role, OrgAssignment
+    from app.auth.utils import hash_password
+
+    # Create IAM permissions
+    permissions = [
+        Permission(
+            id=uuid4(),
+            code="system.org_units.read",
+            description="Read org units",
+        ),
+        Permission(
+            id=uuid4(),
+            code="system.org_units.create",
+            description="Create org units",
+        ),
+        Permission(
+            id=uuid4(),
+            code="system.org_units.update",
+            description="Update org units",
+        ),
+        Permission(
+            id=uuid4(),
+            code="system.org_units.delete",
+            description="Delete org units",
+        ),
+        Permission(
+            id=uuid4(),
+            code="system.roles.read",
+            description="Read roles",
+        ),
+        Permission(
+            id=uuid4(),
+            code="system.roles.create",
+            description="Create roles",
+        ),
+        Permission(
+            id=uuid4(),
+            code="system.roles.update",
+            description="Update roles",
+        ),
+        Permission(
+            id=uuid4(),
+            code="system.roles.delete",
+            description="Delete roles",
+        ),
+        Permission(
+            id=uuid4(),
+            code="system.permissions.read",
+            description="Read permissions",
+        ),
+        Permission(
+            id=uuid4(),
+            code="system.roles.assign",
+            description="Assign permissions to roles",
+        ),
+        Permission(
+            id=uuid4(),
+            code="system.audit.view",
+            description="View audit logs",
+        ),
+    ]
+
+    for perm in permissions:
+        db.add(perm)
+    db.flush()
+
+    # Create IAM role
+    iam_role = Role(
+        id=uuid4(),
+        tenant_id=UUID(tenant_id),
+        name="IAM Role",
+    )
+    db.add(iam_role)
+    db.flush()
+
+    # Assign all permissions to role
+    for perm in permissions:
+        role_perm = RolePermission(
+            role_id=iam_role.id,
+            permission_id=perm.id,
+        )
+        db.add(role_perm)
+
+    # Create user
+    user = User(
+        id=uuid4(),
+        tenant_id=UUID(tenant_id),
+        email="iam@example.com",
+        password_hash=hash_password("testpass123"),
+        is_active=True,
+        is_2fa_enabled=False,
+    )
+    db.add(user)
+    db.flush()
+
+    # Assign role to user
+    assignment = OrgAssignment(
+        id=uuid4(),
+        tenant_id=UUID(tenant_id),
+        user_id=user.id,
+        org_unit_id=test_org_unit.id,
+        role_id=iam_role.id,
+        scope_type="self",
+    )
+    db.add(assignment)
+    db.commit()
+    db.refresh(user)
+
+    return user
+
+
+@pytest.fixture
+def iam_token(iam_user):
+    """Return access token for IAM user."""
+    from app.auth.utils import create_access_token
+
+    return create_access_token(
+        {"sub": str(iam_user.id), "user_id": str(iam_user.id)}
     )

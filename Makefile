@@ -6,8 +6,9 @@ COMPOSE_FILE := infra/docker-compose.yml
 API_SERVICE := api
 
 .PHONY: help build build-no-cache build-no-cache-pull up down restart \
-	logs logs-api logs-all migrate seed test test-verbose api-shell \
-	clean clean-volumes rebuild rebuild-api ps worker worker-shell \
+	logs logs-api logs-all migrate seed test test-verbose test-cov test-cov-verbose test-cov-min \
+	test-pg test-pg-verbose test-pg-cov test-pg-cov-verbose test-pg-cov-min \
+	api-shell clean clean-volumes rebuild rebuild-api ps worker worker-shell \
 	format format-docker format-check format-check-docker
 
 # Default target
@@ -84,6 +85,60 @@ test-pg-verbose: up ## Run tests with PostgreSQL (verbose output)
 	@docker compose -f $(COMPOSE_FILE) exec -T db psql -U app -d postgres -c "CREATE DATABASE test_app;" 2>/dev/null || true
 	@echo "Running tests with PostgreSQL (RLS enabled)..."
 	@docker compose -f $(COMPOSE_FILE) exec -e USE_POSTGRES=true -e POSTGRES_TEST_URL=postgresql+psycopg://app:app@db:5432/test_app $(API_SERVICE) pytest -v
+
+test-cov: up ## Run tests with coverage report
+	@echo "Installing coverage dependencies..."
+	@docker compose -f $(COMPOSE_FILE) exec $(API_SERVICE) pip install pytest-cov --quiet || true
+	@echo "Running tests with coverage..."
+	@docker compose -f $(COMPOSE_FILE) exec $(API_SERVICE) pytest --cov=app --cov-report=term-missing --cov-report=html --cov-report=xml
+	@echo "Coverage report generated in apps/api/htmlcov/index.html"
+
+test-cov-verbose: up ## Run tests with coverage report (verbose)
+	@echo "Installing coverage dependencies..."
+	@docker compose -f $(COMPOSE_FILE) exec $(API_SERVICE) pip install pytest-cov --quiet || true
+	@echo "Running tests with coverage (verbose)..."
+	@docker compose -f $(COMPOSE_FILE) exec $(API_SERVICE) pytest -v --cov=app --cov-report=term-missing --cov-report=html --cov-report=xml
+	@echo "Coverage report generated in apps/api/htmlcov/index.html"
+
+test-cov-min: up ## Run tests with coverage and fail if below threshold
+	@echo "Installing coverage dependencies..."
+	@docker compose -f $(COMPOSE_FILE) exec $(API_SERVICE) pip install pytest-cov --quiet || true
+	@echo "Running tests with coverage (min 80% required)..."
+	@docker compose -f $(COMPOSE_FILE) exec $(API_SERVICE) pytest --cov=app --cov-report=term-missing --cov-report=html --cov-report=xml --cov-fail-under=80
+	@echo "Coverage report generated in apps/api/htmlcov/index.html"
+
+test-pg-cov: up ## Run tests with PostgreSQL and coverage report
+	@echo "Waiting for services to be ready..."
+	@sleep 2
+	@echo "Creating test database if it doesn't exist..."
+	@docker compose -f $(COMPOSE_FILE) exec -T db psql -U app -d postgres -c "CREATE DATABASE test_app;" 2>/dev/null || true
+	@echo "Installing coverage dependencies..."
+	@docker compose -f $(COMPOSE_FILE) exec $(API_SERVICE) pip install pytest-cov --quiet || true
+	@echo "Running tests with PostgreSQL and coverage (RLS enabled)..."
+	@docker compose -f $(COMPOSE_FILE) exec -e USE_POSTGRES=true -e POSTGRES_TEST_URL=postgresql+psycopg://app:app@db:5432/test_app $(API_SERVICE) pytest --cov=app --cov-report=term-missing --cov-report=html --cov-report=xml
+	@echo "Coverage report generated in apps/api/htmlcov/index.html"
+
+test-pg-cov-verbose: up ## Run tests with PostgreSQL and coverage report (verbose)
+	@echo "Waiting for services to be ready..."
+	@sleep 2
+	@echo "Creating test database if it doesn't exist..."
+	@docker compose -f $(COMPOSE_FILE) exec -T db psql -U app -d postgres -c "CREATE DATABASE test_app;" 2>/dev/null || true
+	@echo "Installing coverage dependencies..."
+	@docker compose -f $(COMPOSE_FILE) exec $(API_SERVICE) pip install pytest-cov --quiet || true
+	@echo "Running tests with PostgreSQL and coverage (verbose, RLS enabled)..."
+	@docker compose -f $(COMPOSE_FILE) exec -e USE_POSTGRES=true -e POSTGRES_TEST_URL=postgresql+psycopg://app:app@db:5432/test_app $(API_SERVICE) pytest -v --cov=app --cov-report=term-missing --cov-report=html --cov-report=xml
+	@echo "Coverage report generated in apps/api/htmlcov/index.html"
+
+test-pg-cov-min: up ## Run tests with PostgreSQL and coverage, fail if below threshold
+	@echo "Waiting for services to be ready..."
+	@sleep 2
+	@echo "Creating test database if it doesn't exist..."
+	@docker compose -f $(COMPOSE_FILE) exec -T db psql -U app -d postgres -c "CREATE DATABASE test_app;" 2>/dev/null || true
+	@echo "Installing coverage dependencies..."
+	@docker compose -f $(COMPOSE_FILE) exec $(API_SERVICE) pip install pytest-cov --quiet || true
+	@echo "Running tests with PostgreSQL and coverage (min 80% required, RLS enabled)..."
+	@docker compose -f $(COMPOSE_FILE) exec -e USE_POSTGRES=true -e POSTGRES_TEST_URL=postgresql+psycopg://app:app@db:5432/test_app $(API_SERVICE) pytest --cov=app --cov-report=term-missing --cov-report=html --cov-report=xml --cov-fail-under=80
+	@echo "Coverage report generated in apps/api/htmlcov/index.html"
 
 # Development
 api-shell: ## Open a shell in the API container

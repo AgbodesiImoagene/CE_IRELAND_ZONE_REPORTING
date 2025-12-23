@@ -126,7 +126,7 @@ class TestHandleOAuthCallback:
         assert user.id == test_user.id
         assert is_new is False
 
-    def test_callback_existing_user_by_email(self, db, tenant_id, test_user):
+    def test_callback_existing_user_by_email(self, db, test_user):
         # No identity, but user exists by email
         user, is_new = OAuthService.handle_oauth_callback(
             db,
@@ -180,7 +180,7 @@ class TestHandleOAuthCallback:
         db.refresh(invitation)
         assert invitation.used_at is not None
 
-    def test_callback_create_new_user_no_invitation(self, db, tenant_id):
+    def test_callback_create_new_user_no_invitation(self, db):
         """Test OAuth signup fails without invitation."""
         with pytest.raises(ValueError, match="No valid invitation found"):
             OAuthService.handle_oauth_callback(

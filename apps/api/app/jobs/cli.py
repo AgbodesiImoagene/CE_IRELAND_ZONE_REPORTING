@@ -1,7 +1,7 @@
 """Command-line interface for job workers."""
 
 import sys
-from rq import Connection, Worker
+from rq import Worker
 
 from app.jobs.queue import get_redis_connection
 
@@ -16,9 +16,10 @@ def run_worker(queues: list[str] | None = None):
     if queues is None:
         queues = ["default"]
 
-    with Connection(get_redis_connection()):
-        worker = Worker(queues)
-        worker.work()
+    # In RQ 2.x, pass connection directly to Worker
+    redis_conn = get_redis_connection()
+    worker = Worker(queues, connection=redis_conn)
+    worker.work()
 
 
 if __name__ == "__main__":

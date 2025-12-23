@@ -1,3 +1,5 @@
+"""IAM (Identity and Access Management) models."""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -5,10 +7,8 @@ from typing import Optional
 from uuid import uuid4, UUID
 
 from sqlalchemy import (
-    MetaData,
     String,
     Boolean,
-    Enum,
     ForeignKey,
     UniqueConstraint,
     Index,
@@ -17,30 +17,9 @@ from sqlalchemy import (
     TIMESTAMP,
     Uuid,
 )
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-
-NAMING_CONVENTION = {
-    "ix": "ix_%(column_0_label)s",
-    "uq": "uq_%(table_name)s_%(column_0_name)s",
-    "ck": "ck_%(table_name)s_%(constraint_name)s",
-    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
-    "pk": "pk_%(table_name)s",
-}
-
-metadata = MetaData(naming_convention=NAMING_CONVENTION)
-
-
-class Base(DeclarativeBase):
-    metadata = metadata
-
-
-# Enums
-OrgUnitType = Enum(
-    "region", "zone", "group", "church", "outreach", name="org_unit_type"
-)
-ScopeType = Enum("self", "subtree", "custom_set", name="scope_type")
-TwoFADelivery = Enum("sms", "email", name="twofa_delivery_type")
+from app.common.models.base import Base, OrgUnitType, ScopeType, TwoFADelivery
 
 
 # Core IAM models
@@ -201,6 +180,9 @@ class UserSecret(Base):
     phone: Mapped[Optional[str]] = mapped_column(String(32))
     email: Mapped[Optional[str]] = mapped_column(String(320))
     twofa_secret_hash: Mapped[Optional[str]] = mapped_column(String(255))
+    sent_at: Mapped[Optional[datetime]] = mapped_column(
+        TIMESTAMP(timezone=True)
+    )
     last_verified_at: Mapped[Optional[datetime]] = mapped_column(
         TIMESTAMP(timezone=True)
     )
@@ -320,3 +302,4 @@ class AuditLog(Base):
     occurred_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), default=datetime.now(timezone.utc)
     )
+

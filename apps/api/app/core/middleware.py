@@ -118,7 +118,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
-    """Middleware to log request/response with structured JSON logging and EMF metrics."""
+    """Middleware to log request/response with structured JSON logging and OpenTelemetry metrics."""
 
     def __init__(self, app, exclude_paths: list[str] | None = None):
         super().__init__(app)
@@ -147,6 +147,17 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         # Get user info if available (from request state or auth)
         user_id = getattr(request.state, "user_id", None)
         tenant_id = getattr(request.state, "tenant_id", None)
+
+        # Increment active requests metric
+        try:
+            from app.core.otel_metrics import increment_active_requests
+
+            increment_active_requests(
+                user_id=str(user_id) if user_id else None,
+                tenant_id=str(tenant_id) if tenant_id else None,
+            )
+        except ImportError:
+            pass
 
         # Prepare request log data
         request_log = {
@@ -208,12 +219,23 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             # Decrement active requests
             self._active_requests -= 1
 
+            # Decrement active requests metric
+            try:
+                from app.core.otel_metrics import decrement_active_requests
+
+                decrement_active_requests(
+                    user_id=str(user_id) if user_id else None,
+                    tenant_id=str(tenant_id) if tenant_id else None,
+                )
+            except ImportError:
+                pass
+
             # Calculate duration
             duration_ms = (time.time() - start_time) * 1000
 
-            # Emit EMF metrics
+            # Emit OpenTelemetry metrics
             try:
-                from app.core.metrics import emit_http_request, emit_active_requests
+                from app.core.otel_metrics import emit_http_request
 
                 emit_http_request(
                     method=request.method,
@@ -223,10 +245,6 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                     request_id=request_id,
                     user_id=str(user_id) if user_id else None,
                     tenant_id=str(tenant_id) if tenant_id else None,
-                )
-
-                emit_active_requests(
-                    count=self._active_requests,
                 )
             except ImportError:
                 # Metrics module not available, skip

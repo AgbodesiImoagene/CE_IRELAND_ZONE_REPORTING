@@ -1,11 +1,10 @@
-"""Tests for metrics emission functionality."""
+"""Tests for OpenTelemetry metrics emission functionality."""
 
 from __future__ import annotations
 
-import json
-import logging
+from unittest.mock import patch, MagicMock
 
-from app.core.metrics import (
+from app.core.otel_metrics import (
     emit_business_metric,
     emit_database_query,
     emit_error,
@@ -15,11 +14,16 @@ from app.core.metrics import (
 
 
 class TestMetricsEmission:
-    """Test metrics emission functions."""
+    """Test OpenTelemetry metrics emission functions."""
 
-    def test_emit_database_query_success(self, caplog):
+    @patch("app.core.otel_metrics._get_db_query_counter")
+    @patch("app.core.otel_metrics._get_db_query_duration")
+    def test_emit_database_query_success(self, mock_duration, mock_counter):
         """Test that database query metrics are emitted correctly."""
-        caplog.set_level(logging.INFO)
+        mock_counter_instance = MagicMock()
+        mock_counter.return_value = mock_counter_instance
+        mock_duration_instance = MagicMock()
+        mock_duration.return_value = mock_duration_instance
 
         emit_database_query(
             operation="SELECT",
@@ -28,21 +32,28 @@ class TestMetricsEmission:
             table="users",
         )
 
-        # Check that EMF log was emitted
-        log_records = [record.message for record in caplog.records]
-        emf_logs = [log for log in log_records if "_aws" in log]
+        # Verify counter was called
+        mock_counter_instance.add.assert_called_once()
+        call_args = mock_counter_instance.add.call_args
+        assert call_args[0][0] == 1  # Count
+        assert call_args[1]["attributes"]["db.operation"] == "SELECT"
+        assert call_args[1]["attributes"]["db.success"] == "true"
+        assert call_args[1]["attributes"]["table"] == "users"
 
-        assert len(emf_logs) > 0
-        emf_data = json.loads(emf_logs[0])
+        # Verify duration histogram was called
+        mock_duration_instance.record.assert_called_once()
+        duration_args = mock_duration_instance.record.call_args
+        assert duration_args[0][0] == 25.5
+        assert duration_args[1]["attributes"]["db.operation"] == "SELECT"
 
-        assert "_aws" in emf_data
-        assert "DatabaseQueryCount" in emf_data
-        assert "DatabaseQueryDuration" in emf_data
-        assert emf_data["DatabaseQueryDuration"] == 25.5
-
-    def test_emit_database_query_error(self, caplog):
+    @patch("app.core.otel_metrics._get_db_query_counter")
+    @patch("app.core.otel_metrics._get_db_query_duration")
+    def test_emit_database_query_error(self, mock_duration, mock_counter):
         """Test that database query errors emit error metrics."""
-        caplog.set_level(logging.INFO)
+        mock_counter_instance = MagicMock()
+        mock_counter.return_value = mock_counter_instance
+        mock_duration_instance = MagicMock()
+        mock_duration.return_value = mock_duration_instance
 
         emit_database_query(
             operation="SELECT",
@@ -51,17 +62,18 @@ class TestMetricsEmission:
             error_type="ConnectionError",
         )
 
-        log_records = [record.message for record in caplog.records]
-        emf_logs = [log for log in log_records if "_aws" in log]
+        call_args = mock_counter_instance.add.call_args
+        assert call_args[1]["attributes"]["db.success"] == "false"
+        assert call_args[1]["attributes"]["error_type"] == "ConnectionError"
 
-        assert len(emf_logs) > 0
-        emf_data = json.loads(emf_logs[0])
-
-        assert emf_data["Success"] == "false"
-
-    def test_emit_redis_operation_success(self, caplog):
+    @patch("app.core.otel_metrics._get_redis_operation_counter")
+    @patch("app.core.otel_metrics._get_redis_operation_duration")
+    def test_emit_redis_operation_success(self, mock_duration, mock_counter):
         """Test that Redis operation metrics are emitted correctly."""
-        caplog.set_level(logging.INFO)
+        mock_counter_instance = MagicMock()
+        mock_counter.return_value = mock_counter_instance
+        mock_duration_instance = MagicMock()
+        mock_duration.return_value = mock_duration_instance
 
         emit_redis_operation(
             operation="GET",
@@ -70,20 +82,20 @@ class TestMetricsEmission:
             key="test_key",
         )
 
-        log_records = [record.message for record in caplog.records]
-        emf_logs = [log for log in log_records if "_aws" in log]
+        call_args = mock_counter_instance.add.call_args
+        assert call_args[0][0] == 1
+        assert call_args[1]["attributes"]["redis.operation"] == "GET"
+        assert call_args[1]["attributes"]["redis.success"] == "true"
+        assert call_args[1]["attributes"]["key"] == "test_key"
 
-        assert len(emf_logs) > 0
-        emf_data = json.loads(emf_logs[0])
+        duration_args = mock_duration_instance.record.call_args
+        assert duration_args[0][0] == 5.2
 
-        assert "RedisOperationCount" in emf_data
-        assert "RedisOperationDuration" in emf_data
-        assert emf_data["RedisOperationDuration"] == 5.2
-        assert emf_data["Operation"] == "GET"
-
-    def test_emit_error_metric(self, caplog):
+    @patch("app.core.otel_metrics._get_error_counter")
+    def test_emit_error_metric(self, mock_counter):
         """Test that error metrics are emitted correctly."""
-        caplog.set_level(logging.INFO)
+        mock_counter_instance = MagicMock()
+        mock_counter.return_value = mock_counter_instance
 
         emit_error(
             error_code="validation_error",
@@ -93,20 +105,18 @@ class TestMetricsEmission:
             user_id="user123",
         )
 
-        log_records = [record.message for record in caplog.records]
-        emf_logs = [log for log in log_records if "_aws" in log]
+        call_args = mock_counter_instance.add.call_args
+        assert call_args[0][0] == 1
+        assert call_args[1]["attributes"]["error.code"] == "validation_error"
+        assert call_args[1]["attributes"]["http.status_code"] == "422"
+        assert call_args[1]["attributes"]["error.severity"] == "client_error"
+        assert call_args[1]["attributes"]["user_id"] == "user123"
 
-        assert len(emf_logs) > 0
-        emf_data = json.loads(emf_logs[0])
-
-        assert "ErrorCount" in emf_data
-        assert emf_data["ErrorCode"] == "validation_error"
-        assert emf_data["StatusCode"] == "422"
-        assert emf_data["Severity"] == "client_error"
-
-    def test_emit_error_server_error_severity(self, caplog):
+    @patch("app.core.otel_metrics._get_error_counter")
+    def test_emit_error_server_error_severity(self, mock_counter):
         """Test that 500+ errors have server_error severity."""
-        caplog.set_level(logging.INFO)
+        mock_counter_instance = MagicMock()
+        mock_counter.return_value = mock_counter_instance
 
         emit_error(
             error_code="internal_error",
@@ -115,17 +125,14 @@ class TestMetricsEmission:
             method="GET",
         )
 
-        log_records = [record.message for record in caplog.records]
-        emf_logs = [log for log in log_records if "_aws" in log]
+        call_args = mock_counter_instance.add.call_args
+        assert call_args[1]["attributes"]["error.severity"] == "server_error"
 
-        assert len(emf_logs) > 0
-        emf_data = json.loads(emf_logs[0])
-
-        assert emf_data["Severity"] == "server_error"
-
-    def test_emit_business_metric(self, caplog):
+    @patch("app.core.otel_metrics._get_business_metric_counter")
+    def test_emit_business_metric(self, mock_counter):
         """Test that business metrics are emitted correctly."""
-        caplog.set_level(logging.INFO)
+        mock_counter_instance = MagicMock()
+        mock_counter.return_value = mock_counter_instance
 
         emit_business_metric(
             metric_name="UserSignup",
@@ -134,19 +141,20 @@ class TestMetricsEmission:
             tenant_id="tenant123",
         )
 
-        log_records = [record.message for record in caplog.records]
-        emf_logs = [log for log in log_records if "_aws" in log]
+        call_args = mock_counter_instance.add.call_args
+        assert call_args[0][0] == 1
+        assert call_args[1]["attributes"]["metric.name"] == "UserSignup"
+        assert call_args[1]["attributes"]["metric.category"] == "user"
+        assert call_args[1]["attributes"]["tenant_id"] == "tenant123"
 
-        assert len(emf_logs) > 0
-        emf_data = json.loads(emf_logs[0])
-
-        assert "UserSignup" in emf_data
-        assert emf_data["UserSignup"] == 1
-        assert emf_data["Category"] == "user"
-
-    def test_emit_http_request_metrics(self, caplog):
+    @patch("app.core.otel_metrics._get_http_request_counter")
+    @patch("app.core.otel_metrics._get_http_request_duration")
+    def test_emit_http_request_metrics(self, mock_duration, mock_counter):
         """Test that HTTP request metrics are emitted correctly."""
-        caplog.set_level(logging.INFO)
+        mock_counter_instance = MagicMock()
+        mock_counter.return_value = mock_counter_instance
+        mock_duration_instance = MagicMock()
+        mock_duration.return_value = mock_duration_instance
 
         emit_http_request(
             method="GET",
@@ -156,21 +164,21 @@ class TestMetricsEmission:
             request_id="req123",
         )
 
-        log_records = [record.message for record in caplog.records]
-        emf_logs = [log for log in log_records if "_aws" in log]
+        call_args = mock_counter_instance.add.call_args
+        assert call_args[0][0] == 1
+        assert call_args[1]["attributes"]["http.method"] == "GET"
+        assert call_args[1]["attributes"]["http.route"] == "/api/v1/users/{id}"  # Normalized
+        assert call_args[1]["attributes"]["http.status_code"] == "200"
+        assert call_args[1]["attributes"]["request_id"] == "req123"
 
-        assert len(emf_logs) > 0
-        emf_data = json.loads(emf_logs[0])
+        duration_args = mock_duration_instance.record.call_args
+        assert duration_args[0][0] == 45.3
 
-        assert "RequestCount" in emf_data
-        assert "RequestDuration" in emf_data
-        assert emf_data["RequestDuration"] == 45.3
-        assert emf_data["Method"] == "GET"
-        assert emf_data["Path"] == "/api/v1/users/{id}"  # Normalized
-
-    def test_path_normalization(self, caplog):
+    @patch("app.core.otel_metrics._get_http_request_counter")
+    def test_path_normalization(self, mock_counter):
         """Test that paths are normalized to reduce cardinality."""
-        caplog.set_level(logging.INFO)
+        mock_counter_instance = MagicMock()
+        mock_counter.return_value = mock_counter_instance
 
         # Test UUID normalization
         emit_http_request(
@@ -180,70 +188,23 @@ class TestMetricsEmission:
             duration_ms=10.0,
         )
 
-        log_records = [record.message for record in caplog.records]
-        emf_logs = [log for log in log_records if "_aws" in log]
-
-        assert len(emf_logs) > 0
-        emf_data = json.loads(emf_logs[0])
-
+        call_args = mock_counter_instance.add.call_args
         # Path should be normalized
-        assert emf_data["Path"] == "/api/v1/users/{id}"
-        # But original path should be in metadata
-        assert "request_path" in emf_data
-        assert "123e4567-e89b-12d3-a456-426614174000" in emf_data["request_path"]
+        assert call_args[1]["attributes"]["http.route"] == "/api/v1/users/{id}"
 
-    def test_metrics_disabled_when_setting_false(self, caplog):
+    @patch("app.core.otel_metrics.settings")
+    def test_metrics_disabled_when_setting_false(self, mock_settings):
         """Test that metrics are not emitted when disabled."""
-        from app.core.config import settings
-        from app.core.metrics import _emf_metrics
+        from unittest.mock import patch
 
-        original_setting = settings.enable_metrics
-        original_metrics = _emf_metrics
+        mock_settings.enable_metrics = False
 
-        # Reset the global singleton to ensure fresh instance
-        import app.core.metrics as metrics_module
-
-        metrics_module._emf_metrics = None
-
-        try:
-            settings.enable_metrics = False
-
-            caplog.set_level(logging.INFO)
-            caplog.clear()
-
+        with patch("app.core.otel_metrics._get_db_query_counter") as mock_counter:
             emit_database_query(
                 operation="SELECT",
                 duration_ms=10.0,
                 success=True,
             )
 
-            # Should not emit any EMF logs
-            log_records = [record.message for record in caplog.records]
-            emf_logs = [log for log in log_records if "_aws" in log]
-            assert len(emf_logs) == 0
-        finally:
-            settings.enable_metrics = original_setting
-            metrics_module._emf_metrics = original_metrics
-
-    def test_emf_format_structure(self, caplog):
-        """Test that EMF format has correct structure."""
-        caplog.set_level(logging.INFO)
-
-        emit_database_query(
-            operation="SELECT",
-            duration_ms=20.0,
-            success=True,
-        )
-
-        log_records = [record.message for record in caplog.records]
-        emf_logs = [log for log in log_records if "_aws" in log]
-
-        assert len(emf_logs) > 0
-        emf_data = json.loads(emf_logs[0])
-
-        # Verify EMF structure
-        assert "_aws" in emf_data
-        assert "CloudWatchMetrics" in emf_data["_aws"]
-        assert "Namespace" in emf_data["_aws"]["CloudWatchMetrics"][0]
-        assert "Metrics" in emf_data["_aws"]["CloudWatchMetrics"][0]
-        assert "Timestamp" in emf_data["_aws"]
+            # Counter should not be called when metrics are disabled
+            mock_counter.assert_not_called()

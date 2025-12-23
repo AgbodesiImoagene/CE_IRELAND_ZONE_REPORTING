@@ -58,6 +58,8 @@ class AuthService:
                 email=user.email,
             )
             db.add(secret)
+        elif secret.twofa_delivery != delivery_method:
+            secret.twofa_delivery = delivery_method
 
         secret.twofa_secret_hash = code_hash
         secret.last_verified_at = None
@@ -92,10 +94,14 @@ class AuthService:
         if provided_hash != secret.twofa_secret_hash:
             return False
 
-        # Codes are valid for 5 minutes (we store hash immediately when sending)
-        # If last_verified_at is None, the code hasn't been verified yet, so it's still valid
-        # For simplicity, we check that we verify within 5 min of when secret was last updated
-        # In production, add a sent_at timestamp to UserSecret
+        # Codes are valid for 5 minutes from when they were sent
+        if secret.sent_at is None:
+            return False
+
+        now = datetime.now(timezone.utc)
+        code_age = now - secret.sent_at
+        if code_age > timedelta(minutes=5):
+            return False
 
         secret.last_verified_at = datetime.now(timezone.utc)
         secret.twofa_secret_hash = None  # One-time use

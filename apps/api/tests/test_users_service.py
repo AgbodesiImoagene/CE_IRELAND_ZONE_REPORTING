@@ -9,6 +9,7 @@ from uuid import UUID, uuid4
 import pytest
 from sqlalchemy import select
 
+from app.auth.utils import hash_password
 from app.common.models import (
     OrgAssignment,
     OrgUnit,
@@ -17,7 +18,7 @@ from app.common.models import (
     UserInvitation,
     UserSecret,
 )
-from app.users.service import UserProvisioningService
+from app.users.service import UserManagementService, UserProvisioningService
 
 
 def _ensure_timezone_aware(dt: datetime) -> datetime:
@@ -429,4 +430,605 @@ class TestCreateUserDirect:
                 scope_type="self",
                 custom_org_unit_ids=None,
                 twofa_delivery="email",
+            )
+
+
+class TestUserManagementService:
+    """Tests for UserManagementService."""
+
+    def test_list_users_all(self, db, tenant_id, test_user):
+        """Test listing all users."""
+        users, total = UserManagementService.list_users(
+            db=db,
+            tenant_id=UUID(tenant_id),
+            limit=100,
+            offset=0,
+        )
+        assert total >= 1
+        assert any(u.id == test_user.id for u in users)
+
+    def test_list_users_with_filters(
+        self, db, tenant_id, admin_user, test_role, test_org_unit
+    ):
+        """Test listing users with filters."""
+        # Create a user with assignment
+        user = User(
+            id=uuid4(),
+            tenant_id=UUID(tenant_id),
+            email="filtered@example.com",
+            password_hash=hash_password("password"),
+            is_active=True,
+            is_2fa_enabled=False,
+        )
+        db.add(user)
+        db.flush()
+
+        assignment = OrgAssignment(
+            tenant_id=UUID(tenant_id),
+            user_id=user.id,
+            org_unit_id=test_org_unit.id,
+            role_id=test_role.id,
+            scope_type="self",
+        )
+        db.add(assignment)
+        db.commit()
+
+        # Filter by org_unit_id
+        users, total = UserManagementService.list_users(
+            db=db,
+            tenant_id=UUID(tenant_id),
+            org_unit_id=test_org_unit.id,
+            limit=100,
+            offset=0,
+        )
+        assert total >= 1
+        assert any(u.id == user.id for u in users)
+
+        # Filter by role_id
+        users, total = UserManagementService.list_users(
+            db=db,
+            tenant_id=UUID(tenant_id),
+            role_id=test_role.id,
+            limit=100,
+            offset=0,
+        )
+        assert total >= 1
+        assert any(u.id == user.id for u in users)
+
+        # Filter by is_active
+        users, total = UserManagementService.list_users(
+            db=db,
+            tenant_id=UUID(tenant_id),
+            is_active=True,
+            limit=100,
+            offset=0,
+        )
+        assert total >= 1
+        assert all(u.is_active is True for u in users)
+
+        # Filter by search
+        users, total = UserManagementService.list_users(
+            db=db,
+            tenant_id=UUID(tenant_id),
+            search="filtered",
+            limit=100,
+            offset=0,
+        )
+        assert total >= 1
+        assert any("filtered" in u.email for u in users)
+
+    def test_get_user(self, db, tenant_id, test_user):
+        """Test getting a single user."""
+        user = UserManagementService.get_user(
+            db=db, user_id=test_user.id, tenant_id=UUID(tenant_id)
+        )
+        assert user is not None
+        assert user.id == test_user.id
+        assert user.email == test_user.email
+
+    def test_get_user_not_found(self, db, tenant_id):
+        """Test getting non-existent user."""
+        user = UserManagementService.get_user(
+            db=db, user_id=uuid4(), tenant_id=UUID(tenant_id)
+        )
+        assert user is None
+
+    def test_update_user(self, db, tenant_id, admin_user):
+        """Test updating a user."""
+        # Create a user to update
+        user = User(
+            id=uuid4(),
+            tenant_id=UUID(tenant_id),
+            email="update@example.com",
+            password_hash=hash_password("password"),
+            is_active=True,
+            is_2fa_enabled=False,
+        )
+        db.add(user)
+        db.commit()
+
+        updated = UserManagementService.update_user(
+            db=db,
+            updater_id=admin_user.id,
+            tenant_id=UUID(tenant_id),
+            user_id=user.id,
+            email="updated@example.com",
+            is_active=False,
+            is_2fa_enabled=True,
+        )
+
+        assert updated.email == "updated@example.com"
+        assert updated.is_active is False
+        assert updated.is_2fa_enabled is True
+
+    def test_update_user_partial(self, db, tenant_id, admin_user):
+        """Test partial user update."""
+        user = User(
+            id=uuid4(),
+            tenant_id=UUID(tenant_id),
+            email="partial@example.com",
+            password_hash=hash_password("password"),
+            is_active=True,
+            is_2fa_enabled=False,
+        )
+        db.add(user)
+        db.commit()
+
+        updated = UserManagementService.update_user(
+            db=db,
+            updater_id=admin_user.id,
+            tenant_id=UUID(tenant_id),
+            user_id=user.id,
+            email="partial_updated@example.com",
+        )
+
+        assert updated.email == "partial_updated@example.com"
+        assert updated.is_active is True  # Unchanged
+        assert updated.is_2fa_enabled is False  # Unchanged
+
+    def test_update_user_no_permission(self, db, tenant_id, test_user):
+        """Test update fails without permission."""
+        user = User(
+            id=uuid4(),
+            tenant_id=UUID(tenant_id),
+            email="noperm@example.com",
+            password_hash=hash_password("password"),
+            is_active=True,
+            is_2fa_enabled=False,
+        )
+        db.add(user)
+        db.commit()
+
+        with pytest.raises(ValueError, match="User lacks required permission"):
+            UserManagementService.update_user(
+                db=db,
+                updater_id=test_user.id,
+                tenant_id=UUID(tenant_id),
+                user_id=user.id,
+                email="updated@example.com",
+            )
+
+    def test_delete_user(self, db, tenant_id, admin_user):
+        """Test deleting a user (soft delete)."""
+        user = User(
+            id=uuid4(),
+            tenant_id=UUID(tenant_id),
+            email="delete@example.com",
+            password_hash=hash_password("password"),
+            is_active=True,
+            is_2fa_enabled=False,
+        )
+        db.add(user)
+        db.commit()
+
+        UserManagementService.delete_user(
+            db=db,
+            deleter_id=admin_user.id,
+            tenant_id=UUID(tenant_id),
+            user_id=user.id,
+        )
+
+        db.refresh(user)
+        assert user.is_active is False
+
+    def test_disable_user(self, db, tenant_id, admin_user):
+        """Test disabling a user."""
+        user = User(
+            id=uuid4(),
+            tenant_id=UUID(tenant_id),
+            email="disable@example.com",
+            password_hash=hash_password("password"),
+            is_active=True,
+            is_2fa_enabled=False,
+        )
+        db.add(user)
+        db.commit()
+
+        disabled = UserManagementService.disable_user(
+            db=db,
+            disabler_id=admin_user.id,
+            tenant_id=UUID(tenant_id),
+            user_id=user.id,
+        )
+
+        assert disabled.is_active is False
+
+    def test_disable_user_already_disabled(self, db, tenant_id, admin_user):
+        """Test disabling already disabled user fails."""
+        user = User(
+            id=uuid4(),
+            tenant_id=UUID(tenant_id),
+            email="alreadydisabled@example.com",
+            password_hash=hash_password("password"),
+            is_active=False,
+            is_2fa_enabled=False,
+        )
+        db.add(user)
+        db.commit()
+
+        with pytest.raises(ValueError, match="already disabled"):
+            UserManagementService.disable_user(
+                db=db,
+                disabler_id=admin_user.id,
+                tenant_id=UUID(tenant_id),
+                user_id=user.id,
+            )
+
+    def test_enable_user(self, db, tenant_id, admin_user):
+        """Test enabling a user."""
+        user = User(
+            id=uuid4(),
+            tenant_id=UUID(tenant_id),
+            email="enable@example.com",
+            password_hash=hash_password("password"),
+            is_active=False,
+            is_2fa_enabled=False,
+        )
+        db.add(user)
+        db.commit()
+
+        enabled = UserManagementService.enable_user(
+            db=db,
+            enabler_id=admin_user.id,
+            tenant_id=UUID(tenant_id),
+            user_id=user.id,
+        )
+
+        assert enabled.is_active is True
+
+    def test_enable_user_already_enabled(self, db, tenant_id, admin_user):
+        """Test enabling already enabled user fails."""
+        user = User(
+            id=uuid4(),
+            tenant_id=UUID(tenant_id),
+            email="alreadyenabled@example.com",
+            password_hash=hash_password("password"),
+            is_active=True,
+            is_2fa_enabled=False,
+        )
+        db.add(user)
+        db.commit()
+
+        with pytest.raises(ValueError, match="already enabled"):
+            UserManagementService.enable_user(
+                db=db,
+                enabler_id=admin_user.id,
+                tenant_id=UUID(tenant_id),
+                user_id=user.id,
+            )
+
+    def test_reset_password(self, db, tenant_id, admin_user):
+        """Test resetting a user's password."""
+        user = User(
+            id=uuid4(),
+            tenant_id=UUID(tenant_id),
+            email="reset@example.com",
+            password_hash=hash_password("oldpassword"),
+            is_active=True,
+            is_2fa_enabled=False,
+        )
+        db.add(user)
+        db.commit()
+        old_hash = user.password_hash
+
+        reset = UserManagementService.reset_password(
+            db=db,
+            resetter_id=admin_user.id,
+            tenant_id=UUID(tenant_id),
+            user_id=user.id,
+            new_password="NewPassword123!",
+        )
+
+        assert reset.password_hash != old_hash
+
+    def test_change_password(self, db, tenant_id):
+        """Test user changing own password."""
+        user = User(
+            id=uuid4(),
+            tenant_id=UUID(tenant_id),
+            email="changepass@example.com",
+            password_hash=hash_password("oldpassword"),
+            is_active=True,
+            is_2fa_enabled=False,
+        )
+        db.add(user)
+        db.commit()
+        old_hash = user.password_hash
+
+        changed = UserManagementService.change_password(
+            db=db,
+            user_id=user.id,
+            tenant_id=UUID(tenant_id),
+            current_password="oldpassword",
+            new_password="NewPassword123!",
+        )
+
+        assert changed.password_hash != old_hash
+
+    def test_change_password_wrong_current(self, db, tenant_id):
+        """Test changing password with wrong current password fails."""
+        user = User(
+            id=uuid4(),
+            tenant_id=UUID(tenant_id),
+            email="wrongpass@example.com",
+            password_hash=hash_password("correctpassword"),
+            is_active=True,
+            is_2fa_enabled=False,
+        )
+        db.add(user)
+        db.commit()
+
+        with pytest.raises(ValueError, match="Current password is incorrect"):
+            UserManagementService.change_password(
+                db=db,
+                user_id=user.id,
+                tenant_id=UUID(tenant_id),
+                current_password="wrongpassword",
+                new_password="NewPassword123!",
+            )
+
+    def test_change_password_no_password(self, db, tenant_id):
+        """Test changing password for user with no password fails."""
+        user = User(
+            id=uuid4(),
+            tenant_id=UUID(tenant_id),
+            email="nopass@example.com",
+            password_hash=None,
+            is_active=True,
+            is_2fa_enabled=False,
+        )
+        db.add(user)
+        db.commit()
+
+        with pytest.raises(ValueError, match="User has no password set"):
+            UserManagementService.change_password(
+                db=db,
+                user_id=user.id,
+                tenant_id=UUID(tenant_id),
+                current_password="anypassword",
+                new_password="NewPassword123!",
+            )
+
+
+class TestInvitationManagement:
+    """Tests for invitation management methods in UserProvisioningService."""
+
+    def test_list_invitations_all(
+        self, db, tenant_id, admin_user, test_role, test_org_unit
+    ):
+        """Test listing all invitations."""
+        # Create an invitation
+        invitation = UserProvisioningService.create_invitation(
+            db=db,
+            creator_id=admin_user.id,
+            tenant_id=UUID(tenant_id),
+            email="list@example.com",
+            role_id=test_role.id,
+            org_unit_id=test_org_unit.id,
+            scope_type="self",
+            custom_org_unit_ids=None,
+            twofa_delivery="email",
+        )
+
+        invitations, total = UserProvisioningService.list_invitations(
+            db=db,
+            tenant_id=UUID(tenant_id),
+            limit=100,
+            offset=0,
+        )
+        assert total >= 1
+        assert any(inv.id == invitation.id for inv in invitations)
+
+    def test_list_invitations_with_filters(
+        self, db, tenant_id, admin_user, test_role, test_org_unit
+    ):
+        """Test listing invitations with filters."""
+        # Create invitations
+        inv1 = UserProvisioningService.create_invitation(
+            db=db,
+            creator_id=admin_user.id,
+            tenant_id=UUID(tenant_id),
+            email="filter1@example.com",
+            role_id=test_role.id,
+            org_unit_id=test_org_unit.id,
+            scope_type="self",
+            custom_org_unit_ids=None,
+            twofa_delivery="email",
+        )
+
+        # Filter by email
+        invitations, total = UserProvisioningService.list_invitations(
+            db=db,
+            tenant_id=UUID(tenant_id),
+            email="filter1",
+            limit=100,
+            offset=0,
+        )
+        assert total >= 1
+        assert any("filter1" in inv.email for inv in invitations)
+
+        # Filter by status (pending)
+        invitations, total = UserProvisioningService.list_invitations(
+            db=db,
+            tenant_id=UUID(tenant_id),
+            status="pending",
+            limit=100,
+            offset=0,
+        )
+        assert total >= 1
+        assert all(inv.used_at is None for inv in invitations)
+
+    def test_get_invitation(
+        self, db, tenant_id, admin_user, test_role, test_org_unit
+    ):
+        """Test getting a single invitation."""
+        invitation = UserProvisioningService.create_invitation(
+            db=db,
+            creator_id=admin_user.id,
+            tenant_id=UUID(tenant_id),
+            email="get@example.com",
+            role_id=test_role.id,
+            org_unit_id=test_org_unit.id,
+            scope_type="self",
+            custom_org_unit_ids=None,
+            twofa_delivery="email",
+        )
+
+        retrieved = UserProvisioningService.get_invitation(
+            db=db, invitation_id=invitation.id, tenant_id=UUID(tenant_id)
+        )
+        assert retrieved is not None
+        assert retrieved.id == invitation.id
+        assert retrieved.email == invitation.email
+
+    def test_get_invitation_not_found(self, db, tenant_id):
+        """Test getting non-existent invitation."""
+        invitation = UserProvisioningService.get_invitation(
+            db=db, invitation_id=uuid4(), tenant_id=UUID(tenant_id)
+        )
+        assert invitation is None
+
+    def test_resend_invitation(
+        self, db, tenant_id, admin_user, test_role, test_org_unit
+    ):
+        """Test resending an invitation."""
+        invitation = UserProvisioningService.create_invitation(
+            db=db,
+            creator_id=admin_user.id,
+            tenant_id=UUID(tenant_id),
+            email="resend@example.com",
+            role_id=test_role.id,
+            org_unit_id=test_org_unit.id,
+            scope_type="self",
+            custom_org_unit_ids=None,
+            twofa_delivery="email",
+        )
+
+        # Resend invitation
+        resent = UserProvisioningService.resend_invitation(
+            db=db,
+            resender_id=admin_user.id,
+            tenant_id=UUID(tenant_id),
+            invitation_id=invitation.id,
+        )
+
+        assert resent.id == invitation.id
+
+        # Verify new notification was created
+        # Query all user_invitation notifications and filter in Python
+        all_notifications = db.execute(
+            select(OutboxNotification).where(
+                OutboxNotification.type == "user_invitation",
+            )
+        ).scalars().all()
+        # Filter by invitation_id in payload
+        notifications = [
+            n for n in all_notifications
+            if n.payload
+            and n.payload.get("invitation_id") == str(invitation.id)
+        ]
+        assert len(notifications) >= 2  # Original + resend
+
+    def test_resend_invitation_used_fails(
+        self, db, tenant_id, admin_user, test_role, test_org_unit
+    ):
+        """Test resending used invitation fails."""
+        invitation = UserProvisioningService.create_invitation(
+            db=db,
+            creator_id=admin_user.id,
+            tenant_id=UUID(tenant_id),
+            email="used@example.com",
+            role_id=test_role.id,
+            org_unit_id=test_org_unit.id,
+            scope_type="self",
+            custom_org_unit_ids=None,
+            twofa_delivery="email",
+        )
+
+        # Mark as used
+        invitation.used_at = datetime.now(timezone.utc)
+        db.commit()
+
+        with pytest.raises(ValueError, match="Cannot resend used invitation"):
+            UserProvisioningService.resend_invitation(
+                db=db,
+                resender_id=admin_user.id,
+                tenant_id=UUID(tenant_id),
+                invitation_id=invitation.id,
+            )
+
+    def test_cancel_invitation(
+        self, db, tenant_id, admin_user, test_role, test_org_unit
+    ):
+        """Test cancelling an invitation."""
+        invitation = UserProvisioningService.create_invitation(
+            db=db,
+            creator_id=admin_user.id,
+            tenant_id=UUID(tenant_id),
+            email="cancel@example.com",
+            role_id=test_role.id,
+            org_unit_id=test_org_unit.id,
+            scope_type="self",
+            custom_org_unit_ids=None,
+            twofa_delivery="email",
+        )
+
+        # Cancel invitation
+        UserProvisioningService.cancel_invitation(
+            db=db,
+            canceller_id=admin_user.id,
+            tenant_id=UUID(tenant_id),
+            invitation_id=invitation.id,
+        )
+
+        # Verify marked as used
+        db.refresh(invitation)
+        assert invitation.used_at is not None
+
+    def test_cancel_invitation_already_used_fails(
+        self, db, tenant_id, admin_user, test_role, test_org_unit
+    ):
+        """Test cancelling already used invitation fails."""
+        invitation = UserProvisioningService.create_invitation(
+            db=db,
+            creator_id=admin_user.id,
+            tenant_id=UUID(tenant_id),
+            email="alreadyused@example.com",
+            role_id=test_role.id,
+            org_unit_id=test_org_unit.id,
+            scope_type="self",
+            custom_org_unit_ids=None,
+            twofa_delivery="email",
+        )
+
+        # Mark as used
+        invitation.used_at = datetime.now(timezone.utc)
+        db.commit()
+
+        with pytest.raises(ValueError, match="already used or cancelled"):
+            UserProvisioningService.cancel_invitation(
+                db=db,
+                canceller_id=admin_user.id,
+                tenant_id=UUID(tenant_id),
+                invitation_id=invitation.id,
             )

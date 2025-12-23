@@ -5,9 +5,7 @@ Tests the full flow from database/Redis operations to metrics emission.
 
 from __future__ import annotations
 
-import json
-import logging
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
@@ -20,14 +18,12 @@ from app.common.models import User
 class TestInstrumentationIntegration:
     """Integration tests for instrumentation end-to-end."""
 
-    def test_database_query_to_metric_flow(self, db, caplog):
+    @patch("app.core.db_instrumentation.emit_database_query")
+    def test_database_query_to_metric_flow(self, mock_emit, db):
         """Test complete flow: database query -> event listener -> metric."""
         from app.core.config import settings
         from uuid import uuid4, UUID
         from app.auth.utils import hash_password
-
-        caplog.set_level(logging.INFO)
-        caplog.clear()
 
         # Create a user (triggers INSERT)
         user = User(
@@ -40,28 +36,18 @@ class TestInstrumentationIntegration:
         db.add(user)
         db.commit()
 
-        # Check that EMF metric was logged
-        log_records = [record.message for record in caplog.records]
-        emf_logs = [
-            log for log in log_records if "_aws" in log and "DatabaseQuery" in log
-        ]
-
-        # Should have at least one database metric
-        assert len(emf_logs) > 0
-
-        # Verify EMF format
-        emf_data = json.loads(emf_logs[0])
-        assert "_aws" in emf_data
-        assert "CloudWatchMetrics" in emf_data["_aws"]
+        # Should have at least one database metric call
+        assert mock_emit.called
+        # Check that it was called with correct operation type
+        call_args = mock_emit.call_args_list
+        assert any(
+            call[1]["operation"] == "INSERT" for call in call_args
+        )
 
     @pytest.mark.asyncio
-    async def test_redis_operation_to_metric_flow(self, caplog):
+    @patch("app.core.redis_instrumentation.emit_redis_operation")
+    async def test_redis_operation_to_metric_flow(self, mock_emit):
         """Test complete flow: Redis operation -> wrapper -> metric."""
-        import redis.asyncio as aioredis
-
-        caplog.set_level(logging.INFO)
-        caplog.clear()
-
         # Create a real Redis client and wrap it
         mock_client = AsyncMock()
         mock_client.get = AsyncMock(return_value="test_value")
@@ -72,26 +58,22 @@ class TestInstrumentationIntegration:
         result = await instrumented.get("test_key")
         assert result == "test_value"
 
-        # Check that EMF metric was logged
-        log_records = [record.message for record in caplog.records]
-        emf_logs = [
-            log for log in log_records if "_aws" in log and "RedisOperation" in log
-        ]
+        # Should have Redis operation metric call
+        assert mock_emit.called
+        call_args = mock_emit.call_args
+        assert call_args[1]["operation"] == "GET"
+        assert call_args[1]["success"] is True
 
-        # Should have Redis operation metric
-        assert len(emf_logs) > 0
+    @patch("app.core.otel_metrics._get_db_query_counter")
+    @patch("app.core.otel_metrics._get_db_query_duration")
+    def test_metrics_emission_format_compliance(self, mock_duration, mock_counter):
+        """Test that emitted metrics use OpenTelemetry format."""
+        from app.core.otel_metrics import emit_database_query
 
-        # Verify EMF format
-        emf_data = json.loads(emf_logs[0])
-        assert "_aws" in emf_data
-        assert "CloudWatchMetrics" in emf_data["_aws"]
-
-    def test_metrics_emission_format_compliance(self, caplog):
-        """Test that emitted metrics comply with CloudWatch EMF format."""
-        from app.core.metrics import emit_database_query
-
-        caplog.set_level(logging.INFO)
-        caplog.clear()
+        mock_counter_instance = Mock()
+        mock_counter.return_value = mock_counter_instance
+        mock_duration_instance = Mock()
+        mock_duration.return_value = mock_duration_instance
 
         emit_database_query(
             operation="SELECT",
@@ -99,27 +81,18 @@ class TestInstrumentationIntegration:
             success=True,
         )
 
-        log_records = [record.message for record in caplog.records]
-        emf_logs = [log for log in log_records if "_aws" in log]
+        # Verify counter was called with correct attributes
+        assert mock_counter_instance.add.called
+        call_args = mock_counter_instance.add.call_args
+        assert call_args[0][0] == 1  # Count
+        assert "attributes" in call_args[1]
+        assert call_args[1]["attributes"]["db.operation"] == "SELECT"
+        assert call_args[1]["attributes"]["db.success"] == "true"
 
-        assert len(emf_logs) > 0
-        emf_data = json.loads(emf_logs[0])
-
-        # Verify required EMF fields
-        assert "_aws" in emf_data
-        assert "CloudWatchMetrics" in emf_data["_aws"]
-        assert isinstance(emf_data["_aws"]["CloudWatchMetrics"], list)
-        assert len(emf_data["_aws"]["CloudWatchMetrics"]) > 0
-
-        cloudwatch_metrics = emf_data["_aws"]["CloudWatchMetrics"][0]
-        assert "Namespace" in cloudwatch_metrics
-        assert "Metrics" in cloudwatch_metrics
-        assert isinstance(cloudwatch_metrics["Metrics"], list)
-        assert "Timestamp" in emf_data["_aws"]
-
-        # Verify metric values are present
-        assert "DatabaseQueryCount" in emf_data
-        assert "DatabaseQueryDuration" in emf_data
+        # Verify duration histogram was called
+        assert mock_duration_instance.record.called
+        duration_args = mock_duration_instance.record.call_args
+        assert duration_args[0][0] == 15.5
 
     def test_operation_type_extraction(self):
         """Test that operation types are correctly extracted from SQL."""
@@ -142,13 +115,27 @@ class TestInstrumentationIntegration:
         for sql, expected_op in test_cases:
             assert _get_operation_type(sql) == expected_op, f"Failed for: {sql}"
 
-    def test_metrics_namespace_configuration(self, caplog):
+    @patch("opentelemetry.metrics.get_meter_provider")
+    def test_metrics_namespace_configuration(self, mock_get_meter_provider):
         """Test that metrics use correct namespace."""
         from app.core.config import settings
-        from app.core.metrics import emit_database_query
+        from app.core.otel_metrics import emit_database_query
 
-        caplog.set_level(logging.INFO)
-        caplog.clear()
+        # Reset the global meter and counters to force recreation
+        from app.core import otel_metrics
+        otel_metrics._meter = None
+        otel_metrics._db_query_counter = None
+        otel_metrics._db_query_duration = None
+
+        # Create a mock meter provider and meter
+        mock_meter_provider = Mock()
+        mock_meter = Mock()
+        mock_counter = Mock()
+        mock_histogram = Mock()
+        mock_meter.create_counter.return_value = mock_counter
+        mock_meter.create_histogram.return_value = mock_histogram
+        mock_meter_provider.get_meter.return_value = mock_meter
+        mock_get_meter_provider.return_value = mock_meter_provider
 
         emit_database_query(
             operation="SELECT",
@@ -156,22 +143,21 @@ class TestInstrumentationIntegration:
             success=True,
         )
 
-        log_records = [record.message for record in caplog.records]
-        emf_logs = [log for log in log_records if "_aws" in log]
-
-        assert len(emf_logs) > 0
-        emf_data = json.loads(emf_logs[0])
-
-        namespace = emf_data["_aws"]["CloudWatchMetrics"][0]["Namespace"]
-        # Should use tenant_name or metrics_namespace if set
-        assert len(namespace) > 0
+        # Verify meter provider was used to create meter with correct name
+        assert mock_meter_provider.get_meter.called
+        call_args = mock_meter_provider.get_meter.call_args
+        expected_name = (
+            settings.metrics_namespace
+            or settings.tenant_name.replace(" ", "/")
+        )
+        # Verify the meter was created with the correct namespace
+        assert call_args.kwargs["name"] == expected_name
+        assert call_args.kwargs["version"] == "1.0.0"
 
     @pytest.mark.asyncio
-    async def test_redis_pipeline_full_flow(self, caplog):
+    @patch("app.core.redis_instrumentation.emit_redis_operation")
+    async def test_redis_pipeline_full_flow(self, mock_emit):
         """Test complete Redis pipeline instrumentation flow."""
-        caplog.set_level(logging.INFO)
-        caplog.clear()
-
         # Create mock pipeline
         mock_client = AsyncMock()
         mock_pipeline = AsyncMock()
@@ -194,10 +180,10 @@ class TestInstrumentationIntegration:
 
         assert result == [0, 5, 1, 1]
 
-        # Check that pipeline metric was logged
-        log_records = [record.message for record in caplog.records]
-        emf_logs = [log for log in log_records if "_aws" in log and "PIPELINE" in log]
-
-        assert len(emf_logs) > 0
-        emf_data = json.loads(emf_logs[0])
-        assert "RedisOperationDuration" in emf_data
+        # Should have pipeline metric call
+        assert mock_emit.called
+        # Check that it was called with PIPELINE operation
+        call_args_list = mock_emit.call_args_list
+        assert any(
+            call[1]["operation"] == "PIPELINE" for call in call_args_list
+        )

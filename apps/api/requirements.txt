@@ -5,14 +5,21 @@ pydantic-settings==2.11.0
 SQLAlchemy==2.0.44
 psycopg[binary,pool]==3.2.12
 alembic==1.17.1
-redis==7.0.1
+redis==7.1.0
 python-dotenv==1.2.1
-orjson==3.11.4
+orjson==3.11.5
 python-jose[cryptography]==3.5.0
 pwdlib[argon2,bcrypt]==0.3.0
 python-multipart==0.0.20
 pytest==8.4.2
 pytest-asyncio==1.2.0
+pytest-cov==7.0.0
 httpx==0.28.1
 authlib==1.6.5
-rq==2.6.0
+rq==2.6.1
+# OpenTelemetry
+opentelemetry-api==1.39.1
+opentelemetry-sdk==1.39.1
+opentelemetry-instrumentation-fastapi==0.60b1
+opentelemetry-exporter-otlp-proto-http==1.39.1
+opentelemetry-instrumentation-logging==0.60b1
