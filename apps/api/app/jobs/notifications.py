@@ -61,3 +61,51 @@ def enqueue_2fa_notification(
         pass
 
     return notification
+
+
+def enqueue_email_notification(
+    db: Session,
+    email: str,
+    subject: str,
+    body: str,
+) -> OutboxNotification:
+    """
+    Create and enqueue an email notification.
+
+    Args:
+        db: Database session
+        email: Recipient email address
+        subject: Email subject
+        body: Email body (plain text)
+
+    Returns:
+        Created OutboxNotification instance
+    """
+    payload = {
+        "email": email,
+        "subject": subject,
+        "body": body,
+    }
+
+    notification = OutboxNotification(
+        type="email",
+        payload=payload,
+        delivery_state="pending",
+    )
+    db.add(notification)
+    db.commit()
+    db.refresh(notification)
+
+    # Enqueue for processing
+    try:
+        emails_queue.enqueue(
+            "app.jobs.tasks.process_outbox_notification",
+            str(notification.id),
+            job_id=str(notification.id),
+        )
+    except Exception:
+        # If queueing fails, notification remains pending and will be
+        # picked up by the outbox processor
+        pass
+
+    return notification

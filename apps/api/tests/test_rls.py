@@ -1,242 +1,130 @@
-"""Tests for Row-Level Security (RLS) functionality."""
+"""Tests for Row-Level Security (RLS) functions."""
 
 from __future__ import annotations
 
+from unittest.mock import patch, MagicMock
 from uuid import UUID, uuid4
 
-from sqlalchemy.orm import Session
+import pytest
 
-from app.common.models import User
-from app.core.config import settings
-from app.core.rls import _is_postgresql, clear_rls_context, set_rls_context
-
-from tests.conftest import USE_POSTGRES
+from app.core.rls import set_rls_context, clear_rls_context
 
 
-class TestRLSDatabaseDetection:
-    """Test RLS database dialect detection."""
+class TestRLSContext:
+    """Tests for RLS context setting."""
 
-    def test_is_postgresql_detects_sqlite(self, db: Session):
-        """Test that SQLite is correctly detected."""
-        # Tests can use SQLite or PostgreSQL
-        assert _is_postgresql(db) is USE_POSTGRES
-
-    def test_is_postgresql_handles_no_bind(self):
-        """Test that missing bind is handled gracefully."""
-
-        # Create a mock session without bind
-        class MockSession:
-            pass
-
-        mock_db = MockSession()
-        assert _is_postgresql(mock_db) is False
-
-
-class TestRLSContextSetting:
-    """Test RLS context setting and clearing."""
-
-    def test_set_rls_context_with_user_and_permissions(
-        self, db: Session, tenant_id: str
-    ):
-        """Test setting RLS context with user ID and permissions."""
+    def test_set_rls_context_with_user_and_permissions(self, db):
+        """Test setting RLS context with user and permissions."""
+        tenant_id = uuid4()
         user_id = uuid4()
-        tenant_uuid = UUID(tenant_id)
-        permissions = ["users.read", "users.create"]
+        permissions = ["system.users.read", "system.users.create"]
 
-        # Should not raise (SQLite will skip the actual SQL)
-        set_rls_context(
-            db=db,
-            tenant_id=tenant_uuid,
-            user_id=user_id,
-            permissions=permissions,
-        )
+        with patch("app.core.rls.settings") as mock_settings:
+            mock_settings.enable_rls = True
+            with patch("app.core.rls._is_postgresql", return_value=True):
+                with patch.object(db, "execute") as mock_execute:
+                    set_rls_context(db, tenant_id, user_id, permissions)
 
-        # Verify no errors occurred (for SQLite, operations are skipped)
-        assert True
+                    # Should execute 3 SET LOCAL statements
+                    assert mock_execute.call_count == 3
 
-    def test_set_rls_context_without_user(self, db: Session, tenant_id: str):
-        """Test setting RLS context without user ID (unauthenticated)."""
-        tenant_uuid = UUID(tenant_id)
+    def test_set_rls_context_without_user(self, db):
+        """Test setting RLS context without user."""
+        tenant_id = uuid4()
 
-        # Should not raise
-        set_rls_context(
-            db=db,
-            tenant_id=tenant_uuid,
-            user_id=None,
-            permissions=None,
-        )
+        with patch("app.core.rls.settings") as mock_settings:
+            mock_settings.enable_rls = True
+            with patch("app.core.rls._is_postgresql", return_value=True):
+                with patch.object(db, "execute") as mock_execute:
+                    set_rls_context(db, tenant_id, None, None)
 
-        assert True
+                    # Should execute tenant_id SET LOCAL and empty perms array
+                    # (user_id is skipped when None, but perms are always set)
+                    assert mock_execute.call_count == 2
 
-    def test_set_rls_context_without_permissions(self, db: Session, tenant_id: str):
+    def test_set_rls_context_without_permissions(self, db):
         """Test setting RLS context without permissions."""
+        tenant_id = uuid4()
         user_id = uuid4()
-        tenant_uuid = UUID(tenant_id)
 
-        set_rls_context(
-            db=db,
-            tenant_id=tenant_uuid,
-            user_id=user_id,
-            permissions=None,
-        )
+        with patch("app.core.rls.settings") as mock_settings:
+            mock_settings.enable_rls = True
+            with patch("app.core.rls._is_postgresql", return_value=True):
+                with patch.object(db, "execute") as mock_execute:
+                    set_rls_context(db, tenant_id, user_id, None)
 
-        assert True
+                    # Should execute tenant_id and user_id SET LOCAL
+                    # and empty perms array
+                    assert mock_execute.call_count == 3
 
-    def test_clear_rls_context(self, db: Session):
+    def test_set_rls_context_rls_disabled(self, db):
+        """Test that RLS context is not set when RLS is disabled."""
+        tenant_id = uuid4()
+        user_id = uuid4()
+
+        with patch("app.core.rls.settings") as mock_settings:
+            mock_settings.enable_rls = False
+            with patch.object(db, "execute") as mock_execute:
+                set_rls_context(db, tenant_id, user_id, ["perm1"])
+
+                # Should not execute any SET LOCAL statements
+                mock_execute.assert_not_called()
+
+    def test_set_rls_context_sqlite(self, db):
+        """Test that RLS context is not set for SQLite."""
+        tenant_id = uuid4()
+        user_id = uuid4()
+
+        with patch("app.core.rls.settings") as mock_settings:
+            mock_settings.enable_rls = True
+            with patch("app.core.rls._is_postgresql", return_value=False):
+                with patch.object(db, "execute") as mock_execute:
+                    set_rls_context(db, tenant_id, user_id, ["perm1"])
+
+                    # Should not execute any SET LOCAL statements
+                    mock_execute.assert_not_called()
+
+
+class TestClearRLSContext:
+    """Tests for clearing RLS context."""
+
+    def test_clear_rls_context(self, db):
         """Test clearing RLS context."""
-        # Should not raise
-        clear_rls_context(db)
+        with patch("app.core.rls.settings") as mock_settings:
+            mock_settings.enable_rls = True
+            with patch("app.core.rls._is_postgresql", return_value=True):
+                with patch.object(db, "execute") as mock_execute:
+                    clear_rls_context(db)
 
-        assert True
+                    # Should execute 3 SET LOCAL statements to clear
+                    assert mock_execute.call_count == 3
 
-    def test_rls_context_disabled_when_flag_off(
-        self, db: Session, tenant_id: str, monkeypatch
-    ):
-        """Test that RLS operations are skipped when enable_rls is False."""
-        user_id = uuid4()
-        tenant_uuid = UUID(tenant_id)
+    def test_clear_rls_context_rls_disabled(self, db):
+        """Test that RLS context is not cleared when RLS is disabled."""
+        with patch("app.core.rls.settings") as mock_settings:
+            mock_settings.enable_rls = False
+            with patch.object(db, "execute") as mock_execute:
+                clear_rls_context(db)
 
-        # Disable RLS
-        original_value = settings.enable_rls
-        monkeypatch.setattr(settings, "enable_rls", False)
+                # Should not execute any SET LOCAL statements
+                mock_execute.assert_not_called()
 
-        try:
-            # Should complete without errors (operations skipped)
-            set_rls_context(
-                db=db,
-                tenant_id=tenant_uuid,
-                user_id=user_id,
-                permissions=["test.permission"],
-            )
+    def test_clear_rls_context_sqlite(self, db):
+        """Test that RLS context is not cleared for SQLite."""
+        with patch("app.core.rls.settings") as mock_settings:
+            mock_settings.enable_rls = True
+            with patch("app.core.rls._is_postgresql", return_value=False):
+                with patch.object(db, "execute") as mock_execute:
+                    clear_rls_context(db)
 
-            clear_rls_context(db)
-        finally:
-            monkeypatch.setattr(settings, "enable_rls", original_value)
+                    # Should not execute any SET LOCAL statements
+                    mock_execute.assert_not_called()
 
-        assert True
-
-
-class TestRLSIntegration:
-    """Test RLS integration with database queries (note: actual enforcement requires PostgreSQL)."""
-
-    def test_rls_context_with_query(self, db: Session, tenant_id: str, test_user):
-        """Test that setting RLS context doesn't break queries."""
-        tenant_uuid = UUID(tenant_id)
-
-        # Set RLS context
-        set_rls_context(
-            db=db,
-            tenant_id=tenant_uuid,
-            user_id=test_user.id,
-            permissions=["users.read"],
-        )
-
-        # Query should still work (RLS not enforced in SQLite)
-        user = db.get(User, test_user.id)
-        assert user is not None
-        assert user.email == test_user.email
-
-    def test_rls_context_does_not_break_operations(self, db: Session, tenant_id: str):
-        """Test that RLS context setting doesn't interfere with database operations."""
-        tenant_uuid = UUID(tenant_id)
-        user_id = uuid4()
-
-        # Set context
-        set_rls_context(
-            db=db,
-            tenant_id=tenant_uuid,
-            user_id=user_id,
-            permissions=["test.permission"],
-        )
-
-        # Database operations should still work
-        user = User(
-            id=user_id,
-            tenant_id=tenant_uuid,
-            email="test@example.com",
-        )
-        db.add(user)
-        db.commit()
-
-        # Query should work
-        found = db.get(User, user_id)
-        assert found is not None
-        assert found.email == "test@example.com"
-
-        # Clear context
-        clear_rls_context(db)
-
-        # Should still work after clearing
-        found_after = db.get(User, user_id)
-        assert found_after is not None
-
-    def test_set_rls_context_with_empty_permissions(self, db: Session, tenant_id: str):
-        """Test setting RLS context with empty permissions list."""
-        tenant_uuid = UUID(tenant_id)
-        user_id = uuid4()
-
-        set_rls_context(
-            db=db,
-            tenant_id=tenant_uuid,
-            user_id=user_id,
-            permissions=[],
-        )
-
-        assert True
-
-    def test_clear_rls_context_handles_errors(self, db: Session, monkeypatch):
-        """Test that clear_rls_context handles errors gracefully."""
-        from unittest.mock import Mock, patch
-
-        # Mock execute to raise an error
-        with patch.object(db, "execute", side_effect=Exception("DB error")):
-            # Should not raise, should handle error gracefully
-            from app.core.rls import clear_rls_context
-            clear_rls_context(db)
-
-        assert True
-
-    def test_is_postgresql_handles_attribute_error(self):
-        """Test that _is_postgresql handles AttributeError gracefully."""
-        from app.core.rls import _is_postgresql
-
-        # Create a mock session that raises AttributeError
-        class MockSession:
-            @property
-            def bind(self):
-                raise AttributeError("No bind")
-
-        mock_db = MockSession()
-        result = _is_postgresql(mock_db)
-        assert result is False
-
-    def test_is_postgresql_handles_type_error(self):
-        """Test that _is_postgresql handles TypeError gracefully."""
-        from app.core.rls import _is_postgresql
-
-        # Create a mock session that raises TypeError
-        class MockSession:
-            @property
-            def bind(self):
-                raise TypeError("Type error")
-
-        mock_db = MockSession()
-        result = _is_postgresql(mock_db)
-        assert result is False
-
-    def test_set_rls_context_with_special_characters_in_permissions(
-        self, db: Session, tenant_id: str
-    ):
-        """Test setting RLS context with special characters in permissions."""
-        tenant_uuid = UUID(tenant_id)
-        user_id = uuid4()
-        permissions = ["test.permission", "another_permission", "permission-with-dash"]
-
-        set_rls_context(
-            db=db,
-            tenant_id=tenant_uuid,
-            user_id=user_id,
-            permissions=permissions,
-        )
-
-        assert True
+    def test_clear_rls_context_exception_handling(self, db):
+        """Test that exceptions during clearing are handled gracefully."""
+        with patch("app.core.rls.settings") as mock_settings:
+            mock_settings.enable_rls = True
+            with patch("app.core.rls._is_postgresql", return_value=True):
+                with patch.object(db, "execute", side_effect=Exception("DB error")):
+                    # Should not raise exception
+                    clear_rls_context(db)

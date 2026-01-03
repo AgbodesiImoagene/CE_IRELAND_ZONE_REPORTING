@@ -122,3 +122,4 @@ class CellReportResponse(BaseModel):
         "from_attributes": True,
     }
 
+

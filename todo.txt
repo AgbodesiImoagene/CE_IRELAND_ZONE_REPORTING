@@ -1,7 +1,1 @@
-* Add audit logs for all CRUD operations
-* Split models into smaller files - done
-* Registry testing - done
-* Test coverage - done
-* Request caching
-* Check for missing iam endpoints (e.g. get_user_permissions, change_password, reset_password, etc.)
-* Remember to add foreign key on membership table to cell table when it is created
+* Request caching (can be done through nginx)

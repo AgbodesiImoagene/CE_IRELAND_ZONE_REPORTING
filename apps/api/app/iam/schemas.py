@@ -209,3 +209,42 @@ class AuditLogListResponse(BaseModel):
     page: int
     per_page: int
     total: int
+
+
+# Effective Permissions Schemas
+class EffectivePermissionsResponse(BaseModel):
+    """Response with effective permissions for a user at a specific org unit."""
+
+    user_id: UUID
+    org_unit_id: UUID
+    permissions: list[str]
+    applicable_assignments: list[dict]
+
+
+# Bulk Assignment Schemas
+class BulkAssignmentItem(BaseModel):
+    """Single assignment in bulk operation."""
+
+    user_id: UUID
+    org_unit_id: UUID
+    role_id: UUID
+    scope_type: str = Field(
+        default="self", pattern="^(self|subtree|custom_set)$"
+    )
+    custom_org_unit_ids: Optional[list[UUID]] = None
+
+
+class BulkAssignmentRequest(BaseModel):
+    """Request to create multiple assignments."""
+
+    assignments: list[BulkAssignmentItem] = Field(..., min_length=1, max_length=100)
+
+
+class BulkAssignmentResponse(BaseModel):
+    """Response from bulk assignment operation."""
+
+    created: list[OrgAssignmentResponse]
+    failed: list[dict]  # {assignment: dict, error: str}
+    total_requested: int
+    total_created: int
+    total_failed: int

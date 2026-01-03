@@ -23,3 +23,15 @@ opentelemetry-sdk==1.39.1
 opentelemetry-instrumentation-fastapi==0.60b1
 opentelemetry-exporter-otlp-proto-http==1.39.1
 opentelemetry-instrumentation-logging==0.60b1
+# Import dependencies
+pandas>=2.3.3
+openpyxl>=3.1.5
+python-dateutil>=2.9.0
+fuzzywuzzy>=0.18.0
+python-Levenshtein>=0.27.3
+phonenumbers>=9.0.21
+boto3>=1.42.16
+# Report generation dependencies
+reportlab>=4.4.7
+matplotlib>=3.10.8
+seaborn>=0.13.2

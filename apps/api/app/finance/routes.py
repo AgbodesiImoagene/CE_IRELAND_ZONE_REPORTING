@@ -12,7 +12,9 @@ from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
 from app.auth.dependencies import get_current_user_id, get_db_with_rls
+from app.core.business_metrics import BusinessMetric
 from app.core.config import settings
+from app.core.metrics_service import MetricsService
 from app.finance import schemas
 from app.finance.service import (
     FundService,
@@ -43,6 +45,13 @@ async def create_fund(
             name=request.name,
             is_partnership=request.is_partnership,
             active=request.active,
+        )
+
+        # Emit business metric
+        MetricsService.emit_finance_metric(
+            metric_name=BusinessMetric.FINANCE_FUND_CREATED,
+            tenant_id=tenant_id,
+            actor_id=creator_id,
         )
 
         return schemas.FundResponse(
@@ -197,6 +206,13 @@ async def create_partnership_arm(
             active=request.active,
         )
 
+        # Emit business metric
+        MetricsService.emit_finance_metric(
+            metric_name=BusinessMetric.FINANCE_PARTNERSHIP_CREATED,
+            tenant_id=tenant_id,
+            actor_id=creator_id,
+        )
+
         return schemas.PartnershipArmResponse(
             id=partnership_arm.id,
             name=partnership_arm.name,
@@ -347,6 +363,14 @@ async def create_batch(
             tenant_id=tenant_id,
             org_unit_id=request.org_unit_id,
             service_id=request.service_id,
+        )
+
+        # Emit business metric
+        MetricsService.emit_finance_metric(
+            metric_name=BusinessMetric.FINANCE_BATCH_CREATED,
+            tenant_id=tenant_id,
+            actor_id=creator_id,
+            org_unit_id=request.org_unit_id,
         )
 
         return schemas.BatchResponse(
@@ -513,6 +537,18 @@ async def verify_batch(
             batch_id=batch_id,
         )
 
+        # Determine verification number (1 or 2)
+        verification_number = 1 if not batch.verified_by_1 else 2
+
+        # Emit business metric
+        MetricsService.emit_finance_metric(
+            metric_name=BusinessMetric.FINANCE_BATCH_VERIFIED,
+            tenant_id=tenant_id,
+            actor_id=verifier_id,
+            org_unit_id=batch.org_unit_id,
+            verification_number=verification_number,
+        )
+
         return schemas.BatchResponse(
             id=batch.id,
             org_unit_id=batch.org_unit_id,
@@ -548,6 +584,14 @@ async def lock_batch(
             locker_id=locker_id,
             tenant_id=tenant_id,
             batch_id=batch_id,
+        )
+
+        # Emit business metric
+        MetricsService.emit_finance_metric(
+            metric_name=BusinessMetric.FINANCE_BATCH_LOCKED,
+            tenant_id=tenant_id,
+            actor_id=locker_id,
+            org_unit_id=batch.org_unit_id,
         )
 
         return schemas.BatchResponse(
@@ -586,6 +630,14 @@ async def unlock_batch(
             tenant_id=tenant_id,
             batch_id=batch_id,
             reason=request.reason,
+        )
+
+        # Emit business metric
+        MetricsService.emit_finance_metric(
+            metric_name=BusinessMetric.FINANCE_BATCH_UNLOCKED,
+            tenant_id=tenant_id,
+            actor_id=unlocker_id,
+            org_unit_id=batch.org_unit_id,
         )
 
         return schemas.BatchResponse(
@@ -640,6 +692,14 @@ async def create_entry(
             external_giver_name=request.external_giver_name,
             reference=request.reference,
             comment=request.comment,
+        )
+
+        # Emit business metric
+        MetricsService.emit_finance_metric(
+            metric_name=BusinessMetric.FINANCE_ENTRY_CREATED,
+            tenant_id=tenant_id,
+            actor_id=creator_id,
+            org_unit_id=request.org_unit_id,
         )
 
         return schemas.FinanceEntryResponse(
@@ -793,6 +853,14 @@ async def update_entry(
             **updates,
         )
 
+        # Emit business metric
+        MetricsService.emit_finance_metric(
+            metric_name=BusinessMetric.FINANCE_ENTRY_UPDATED,
+            tenant_id=tenant_id,
+            actor_id=updater_id,
+            org_unit_id=entry.org_unit_id,
+        )
+
         return schemas.FinanceEntryResponse(
             id=entry.id,
             org_unit_id=entry.org_unit_id,
@@ -832,12 +900,26 @@ async def delete_entry(
     tenant_id = UUID(settings.tenant_id)
 
     try:
+        # Get entry before deletion to get org_unit_id
+        from app.common.models import FinanceEntry
+        entry = db.get(FinanceEntry, entry_id)
+        org_unit_id = entry.org_unit_id if entry else None
+
         FinanceEntryService.delete_entry(
             db=db,
             deleter_id=deleter_id,
             tenant_id=tenant_id,
             entry_id=entry_id,
         )
+
+        # Emit business metric
+        if org_unit_id:
+            MetricsService.emit_finance_metric(
+                metric_name=BusinessMetric.FINANCE_ENTRY_DELETED,
+                tenant_id=tenant_id,
+                actor_id=deleter_id,
+                org_unit_id=org_unit_id,
+            )
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -862,6 +944,15 @@ async def verify_entry(
             tenant_id=tenant_id,
             entry_id=entry_id,
             verified_status=request.verified_status,
+        )
+
+        # Emit business metric
+        MetricsService.emit_finance_metric(
+            metric_name=BusinessMetric.FINANCE_ENTRY_VERIFIED,
+            tenant_id=tenant_id,
+            actor_id=verifier_id,
+            org_unit_id=entry.org_unit_id,
+            entry_id=str(entry_id),
         )
 
         return schemas.FinanceEntryResponse(
@@ -908,6 +999,15 @@ async def reconcile_entry(
             reconciler_id=reconciler_id,
             tenant_id=tenant_id,
             entry_id=entry_id,
+        )
+
+        # Emit business metric
+        MetricsService.emit_finance_metric(
+            metric_name=BusinessMetric.FINANCE_ENTRY_RECONCILED,
+            tenant_id=tenant_id,
+            actor_id=reconciler_id,
+            org_unit_id=entry.org_unit_id,
+            entry_id=str(entry_id),
         )
 
         return schemas.FinanceEntryResponse(
@@ -966,6 +1066,13 @@ async def create_partnership(
             end_date=request.end_date,
             target_amount=request.target_amount,
             status=request.status,
+        )
+
+        # Emit business metric
+        MetricsService.emit_finance_metric(
+            metric_name=BusinessMetric.FINANCE_PARTNERSHIP_CREATED,
+            tenant_id=tenant_id,
+            actor_id=creator_id,
         )
 
         return schemas.PartnershipResponse(

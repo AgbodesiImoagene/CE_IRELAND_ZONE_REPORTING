@@ -198,6 +198,69 @@ class AuthService:
         return [code for code in db.execute(stmt).scalars().all()]
 
     @staticmethod
+    def get_effective_permissions_for_org(
+        db: Session, user_id: UUID, tenant_id: UUID, org_unit_id: UUID
+    ) -> list[str]:
+        """
+        Get effective permissions for a user at a specific org unit.
+        
+        Only returns permissions from assignments that grant access to the target org unit.
+        
+        Args:
+            db: Database session
+            user_id: User ID
+            tenant_id: Tenant ID
+            org_unit_id: Target org unit ID
+            
+        Returns:
+            List of permission codes that apply to the target org unit
+        """
+        from app.users.scope_validation import _is_descendant
+        from app.common.models import OrgAssignmentUnit
+        
+        # Get all assignments for the user
+        stmt = select(OrgAssignment).where(
+            OrgAssignment.user_id == user_id,
+            OrgAssignment.tenant_id == tenant_id,
+        )
+        assignments = db.execute(stmt).scalars().all()
+        
+        # Filter assignments that grant access to target org unit
+        applicable_assignments = []
+        for assn in assignments:
+            # Check if this specific assignment covers the org unit
+            if assn.scope_type == "self" and assn.org_unit_id == org_unit_id:
+                applicable_assignments.append(assn)
+            elif assn.scope_type == "subtree":
+                # Check if target is descendant of assigned org
+                if _is_descendant(db, org_unit_id, assn.org_unit_id):
+                    applicable_assignments.append(assn)
+            elif assn.scope_type == "custom_set":
+                # Check if target is in custom units
+                custom_unit = db.execute(
+                    select(OrgAssignmentUnit).where(
+                        OrgAssignmentUnit.assignment_id == assn.id,
+                        OrgAssignmentUnit.org_unit_id == org_unit_id,
+                    )
+                ).scalar_one_or_none()
+                if custom_unit:
+                    applicable_assignments.append(assn)
+        
+        # Get permissions from applicable assignments
+        if not applicable_assignments:
+            return []
+        
+        role_ids = [assn.role_id for assn in applicable_assignments]
+        stmt = (
+            select(Permission.code)
+            .join(RolePermission, RolePermission.permission_id == Permission.id)
+            .join(Role, Role.id == RolePermission.role_id)
+            .where(Role.id.in_(role_ids))
+            .distinct()
+        )
+        return [code for code in db.execute(stmt).scalars().all()]
+
+    @staticmethod
     def get_user_info(db: Session, user_id: UUID, tenant_id: UUID) -> dict:
         user = db.get(User, user_id)
         if not user:

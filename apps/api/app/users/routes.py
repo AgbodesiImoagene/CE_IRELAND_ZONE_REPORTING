@@ -14,6 +14,8 @@ from app.common.db import get_db
 from app.common.models import OrgAssignment
 from app.common.request_info import get_request_ip, get_request_user_agent
 from app.core.config import settings
+from app.core.business_metrics import BusinessMetric
+from app.core.metrics_service import MetricsService
 from app.users.schemas import (
     InvitationCreateRequest,
     InvitationDetailResponse,
@@ -27,6 +29,7 @@ from app.users.schemas import (
     UserCreateRequest,
     UserCreateResponse,
     UserListResponse,
+    UserPermissionsResponse,
     UserResponse,
     UserUpdateRequest,
 )
@@ -58,6 +61,15 @@ async def create_invitation(
             custom_org_unit_ids=request.custom_org_unit_ids,
             twofa_delivery=request.twofa_delivery,
         )
+
+        # Emit business metric
+        MetricsService.emit_user_metric(
+            metric_name=BusinessMetric.USER_INVITATION_CREATED,
+            tenant_id=tenant_id,
+            actor_id=creator_id,
+            email=request.email,
+        )
+
         return InvitationResponse(
             id=invitation.id,
             email=invitation.email,
@@ -86,6 +98,14 @@ async def activate_user(
             password=request.password,
             tenant_id=tenant_id,
         )
+
+        # Emit business metric
+        MetricsService.emit_user_metric(
+            metric_name=BusinessMetric.USER_INVITATION_ACCEPTED,
+            tenant_id=tenant_id,
+            user_id=user.id,
+        )
+
         return UserActivationResponse(
             user_id=user.id,
             requires_2fa=True,
@@ -120,6 +140,15 @@ async def create_user(
             custom_org_unit_ids=request.custom_org_unit_ids,
             twofa_delivery=request.twofa_delivery,
         )
+        
+        # Emit business metric
+        MetricsService.emit_user_metric(
+            metric_name=BusinessMetric.USER_CREATED,
+            tenant_id=tenant_id,
+            actor_id=creator_id,
+            role_id=str(request.role_id),
+        )
+        
         return UserCreateResponse(
             user_id=user.id,
             email=user.email,
@@ -449,6 +478,40 @@ async def get_user(
     )
 
 
+@router.get("/{user_id}/permissions", response_model=UserPermissionsResponse)
+async def get_user_permissions(
+    user_id: UUID,
+    current_user_id: UUID = Depends(get_current_user_id),
+    db: Session = Depends(get_db_with_rls),
+):
+    """Get user permissions and role information (admin only)."""
+    tenant_id = UUID(settings.tenant_id)
+
+    # Check permission - admins need system.users.read to view other users' permissions
+    try:
+        from app.iam.scope_validation import require_iam_permission
+        require_iam_permission(
+            db, current_user_id, tenant_id, "system.users.read"
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(e),
+        ) from e
+
+    # Get user info including permissions
+    from app.auth.service import AuthService
+    
+    try:
+        user_info = AuthService.get_user_info(db, user_id, tenant_id)
+        return UserPermissionsResponse(**user_info)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        ) from e
+
+
 @router.patch("/{user_id}", response_model=UserResponse)
 async def update_user(
     user_id: UUID,
@@ -473,6 +536,14 @@ async def update_user(
             is_2fa_enabled=request.is_2fa_enabled,
             ip=ip,
             user_agent=user_agent,
+        )
+
+        # Emit business metric
+        MetricsService.emit_user_metric(
+            metric_name=BusinessMetric.USER_UPDATED,
+            tenant_id=tenant_id,
+            actor_id=updater_id,
+            user_id=user_id,
         )
 
         # Get assignment count
@@ -549,6 +620,14 @@ async def disable_user(
             user_agent=user_agent,
         )
 
+        # Emit business metric
+        MetricsService.emit_user_metric(
+            metric_name=BusinessMetric.USER_DISABLED,
+            tenant_id=tenant_id,
+            actor_id=disabler_id,
+            user_id=user_id,
+        )
+
         # Get assignment count
         assignment_count = db.execute(
             select(func.count()).select_from(OrgAssignment).where(
@@ -593,6 +672,14 @@ async def enable_user(
             user_id=user_id,
             ip=ip,
             user_agent=user_agent,
+        )
+
+        # Emit business metric
+        MetricsService.emit_user_metric(
+            metric_name=BusinessMetric.USER_ENABLED,
+            tenant_id=tenant_id,
+            actor_id=enabler_id,
+            user_id=user_id,
         )
 
         # Get assignment count
@@ -642,6 +729,15 @@ async def reset_password(
             ip=ip,
             user_agent=user_agent,
         )
+
+        # Emit business metric
+        MetricsService.emit_user_metric(
+            metric_name=BusinessMetric.USER_PASSWORD_RESET,
+            tenant_id=tenant_id,
+            actor_id=resetter_id,
+            user_id=user_id,
+        )
+
         return PasswordResetResponse()
     except ValueError as e:
         raise HTTPException(
@@ -680,6 +776,14 @@ async def change_password(
             ip=ip,
             user_agent=user_agent,
         )
+
+        # Emit business metric
+        MetricsService.emit_user_metric(
+            metric_name=BusinessMetric.USER_PASSWORD_CHANGED,
+            tenant_id=tenant_id,
+            user_id=user_id,
+        )
+
         return PasswordResetResponse(message="Password changed successfully")
     except ValueError as e:
         raise HTTPException(
@@ -793,6 +897,15 @@ async def create_assignment(
             ).scalars().all()
             custom_org_unit_ids = [unit.org_unit_id for unit in custom_units]
 
+        # Emit business metric
+        MetricsService.emit_iam_metric(
+            metric_name=BusinessMetric.ASSIGNMENT_CREATED,
+            tenant_id=tenant_id,
+            actor_id=creator_id,
+            user_id=str(user_id),
+            role_id=str(request.role_id),
+        )
+
         return iam_schemas.OrgAssignmentResponse(
             id=assignment.id,
             user_id=assignment.user_id,
@@ -852,6 +965,14 @@ async def update_assignment(
             ).scalars().all()
             custom_org_unit_ids = [unit.org_unit_id for unit in custom_units]
 
+        # Emit business metric
+        MetricsService.emit_iam_metric(
+            metric_name=BusinessMetric.ASSIGNMENT_UPDATED,
+            tenant_id=tenant_id,
+            actor_id=updater_id,
+            assignment_id=str(assignment_id),
+        )
+
         return iam_schemas.OrgAssignmentResponse(
             id=assignment.id,
             user_id=assignment.user_id,
@@ -890,6 +1011,14 @@ async def delete_assignment(
             assignment_id=assignment_id,
             ip=ip,
             user_agent=user_agent,
+        )
+
+        # Emit business metric
+        MetricsService.emit_iam_metric(
+            metric_name=BusinessMetric.ASSIGNMENT_DELETED,
+            tenant_id=tenant_id,
+            actor_id=deleter_id,
+            assignment_id=str(assignment_id),
         )
     except ValueError as e:
         raise HTTPException(

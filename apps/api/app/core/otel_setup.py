@@ -68,7 +68,7 @@ def setup_opentelemetry() -> None:
             )
             logger.info(
                 f"OpenTelemetry metrics exporter configured: "
-                f"{endpoint}"
+                f"{metrics_endpoint}"
             )
         else:
             logger.info(

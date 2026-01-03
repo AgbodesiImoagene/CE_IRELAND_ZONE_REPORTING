@@ -12,7 +12,9 @@ from sqlalchemy.orm import Session
 
 from app.auth.dependencies import get_current_user_id, get_db_with_rls
 from app.common.models import Membership, FirstTimer
+from app.core.business_metrics import BusinessMetric
 from app.core.config import settings
+from app.core.metrics_service import MetricsService
 from app.registry import schemas
 from app.registry.service import (
     PeopleService,
@@ -67,6 +69,15 @@ async def create_person(
         membership = db.execute(
             select(Membership).where(Membership.person_id == person.id)
         ).scalar_one_or_none()
+
+        # Emit business metric
+        MetricsService.emit_registry_metric(
+            metric_name=BusinessMetric.PERSON_CREATED,
+            tenant_id=tenant_id,
+            actor_id=creator_id,
+            org_unit_id=request.org_unit_id,
+            entity_type="person",
+        )
 
         return schemas.PeopleResponse(
             id=person.id,
@@ -241,6 +252,15 @@ async def update_person(
             select(Membership).where(Membership.person_id == person.id)
         ).scalar_one_or_none()
 
+        # Emit business metric
+        MetricsService.emit_registry_metric(
+            metric_name=BusinessMetric.PERSON_UPDATED,
+            tenant_id=tenant_id,
+            actor_id=updater_id,
+            org_unit_id=person.org_unit_id,
+            entity_type="person",
+        )
+
         return schemas.PeopleResponse(
             id=person.id,
             org_unit_id=person.org_unit_id,
@@ -299,6 +319,15 @@ async def merge_people(
             select(Membership).where(Membership.person_id == merged_person.id)
         ).scalar_one_or_none()
 
+        # Emit business metric
+        MetricsService.emit_registry_metric(
+            metric_name=BusinessMetric.PERSON_MERGED,
+            tenant_id=tenant_id,
+            actor_id=merger_id,
+            org_unit_id=merged_person.org_unit_id,
+            entity_type="person",
+        )
+
         return schemas.PeopleResponse(
             id=merged_person.id,
             org_unit_id=merged_person.org_unit_id,
@@ -353,6 +382,20 @@ async def create_first_timer(
             person_id=request.person_id,
             source=request.source,
             notes=request.notes,
+        )
+
+        # Get org_unit_id from service
+        from app.common.models import Service
+        service = db.get(Service, request.service_id)
+        org_unit_id = service.org_unit_id if service else None
+
+        # Emit business metric
+        MetricsService.emit_registry_metric(
+            metric_name=BusinessMetric.FIRST_TIMER_CREATED,
+            tenant_id=tenant_id,
+            actor_id=creator_id,
+            org_unit_id=org_unit_id,
+            entity_type="first_timer",
         )
 
         return schemas.FirstTimerResponse(
@@ -541,6 +584,15 @@ async def convert_first_timer_to_member(
             select(Membership).where(Membership.person_id == person.id)
         ).scalar_one_or_none()
 
+        # Emit business metric
+        MetricsService.emit_registry_metric(
+            metric_name=BusinessMetric.FIRST_TIMER_CONVERTED,
+            tenant_id=tenant_id,
+            actor_id=converter_id,
+            org_unit_id=request.org_unit_id,
+            entity_type="first_timer",
+        )
+
         return schemas.PeopleResponse(
             id=person.id,
             org_unit_id=person.org_unit_id,
@@ -595,6 +647,15 @@ async def create_service(
             name=request.name,
             service_date=request.service_date,
             service_time=request.service_time,
+        )
+
+        # Emit business metric
+        MetricsService.emit_registry_metric(
+            metric_name=BusinessMetric.SERVICE_CREATED,
+            tenant_id=tenant_id,
+            actor_id=creator_id,
+            org_unit_id=request.org_unit_id,
+            entity_type="service",
         )
 
         return schemas.ServiceResponse(
@@ -691,6 +752,21 @@ async def create_attendance(
             new_converts_count=request.new_converts_count,
             total_attendance=request.total_attendance,
             notes=request.notes,
+        )
+
+        # Get org_unit_id from service
+        from app.common.models import Service
+        service = db.get(Service, request.service_id)
+        org_unit_id = service.org_unit_id if service else None
+
+        # Emit business metric
+        MetricsService.emit_registry_metric(
+            metric_name=BusinessMetric.ATTENDANCE_RECORDED,
+            tenant_id=tenant_id,
+            actor_id=creator_id,
+            org_unit_id=org_unit_id,
+            entity_type="attendance",
+            total_attendance=request.total_attendance,
         )
 
         return schemas.AttendanceResponse(
@@ -849,6 +925,15 @@ async def create_department(
             org_unit_id=request.org_unit_id,
             name=request.name,
             status=request.status,
+        )
+
+        # Emit business metric
+        MetricsService.emit_registry_metric(
+            metric_name=BusinessMetric.DEPARTMENT_CREATED,
+            tenant_id=tenant_id,
+            actor_id=creator_id,
+            org_unit_id=request.org_unit_id,
+            entity_type="department",
         )
 
         return schemas.DepartmentResponse(

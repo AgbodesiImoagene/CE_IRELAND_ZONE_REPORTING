@@ -11,6 +11,8 @@ from sqlalchemy.orm import Session
 
 from app.auth.dependencies import get_current_user_id, get_db_with_rls
 from app.core.config import settings
+from app.core.business_metrics import BusinessMetric
+from app.core.metrics_service import MetricsService
 from app.cells import schemas
 from app.cells.service import (
     CellService,
@@ -43,6 +45,14 @@ async def create_cell(
             meeting_day=request.meeting_day,
             meeting_time=request.meeting_time,
             status=request.status,
+        )
+
+        # Emit business metric
+        MetricsService.emit_cell_metric(
+            metric_name=BusinessMetric.CELL_CREATED,
+            tenant_id=tenant_id,
+            actor_id=creator_id,
+            cell_id=cell.id,
         )
 
         return schemas.CellResponse(
@@ -153,6 +163,14 @@ async def update_cell(
             **updates,
         )
 
+        # Emit business metric
+        MetricsService.emit_cell_metric(
+            metric_name=BusinessMetric.CELL_UPDATED,
+            tenant_id=tenant_id,
+            actor_id=updater_id,
+            cell_id=cell_id,
+        )
+
         return schemas.CellResponse(
             id=cell.id,
             org_unit_id=cell.org_unit_id,
@@ -187,6 +205,14 @@ async def delete_cell(
             db=db,
             deleter_id=deleter_id,
             tenant_id=tenant_id,
+            cell_id=cell_id,
+        )
+
+        # Emit business metric
+        MetricsService.emit_cell_metric(
+            metric_name=BusinessMetric.CELL_DELETED,
+            tenant_id=tenant_id,
+            actor_id=deleter_id,
             cell_id=cell_id,
         )
     except ValueError as e:
@@ -225,6 +251,15 @@ async def create_cell_report(
             offerings_total=request.offerings_total,
             meeting_type=request.meeting_type,
             notes=request.notes,
+        )
+
+        # Emit business metric
+        MetricsService.emit_cell_metric(
+            metric_name=BusinessMetric.CELL_REPORT_CREATED,
+            tenant_id=tenant_id,
+            actor_id=creator_id,
+            cell_id=request.cell_id,
+            attendance=request.attendance or 0,
         )
 
         return schemas.CellReportResponse(
@@ -352,6 +387,14 @@ async def update_cell_report(
             **updates,
         )
 
+        # Emit business metric
+        MetricsService.emit_cell_metric(
+            metric_name=BusinessMetric.CELL_REPORT_UPDATED,
+            tenant_id=tenant_id,
+            actor_id=updater_id,
+            cell_id=report.cell_id,
+        )
+
         return schemas.CellReportResponse(
             id=report.id,
             cell_id=report.cell_id,
@@ -394,6 +437,23 @@ async def approve_cell_report(
             status=request.status,
         )
 
+        # Emit business metric based on status
+        if request.status == "approved":
+            MetricsService.emit_cell_metric(
+                metric_name=BusinessMetric.CELL_REPORT_APPROVED,
+                tenant_id=tenant_id,
+                actor_id=approver_id,
+                cell_id=report.cell_id,
+            )
+        elif request.status == "reviewed":
+            MetricsService.emit_cell_metric(
+                metric_name=BusinessMetric.CELL_REPORT_REVIEWED,
+                tenant_id=tenant_id,
+                actor_id=approver_id,
+                cell_id=report.cell_id,
+                status=request.status,
+            )
+
         return schemas.CellReportResponse(
             id=report.id,
             cell_id=report.cell_id,
@@ -427,12 +487,26 @@ async def delete_cell_report(
     tenant_id = UUID(settings.tenant_id)
 
     try:
+        # Get report before deletion to get cell_id
+        from app.common.models import CellReport
+        report = db.get(CellReport, report_id)
+        cell_id = report.cell_id if report else None
+
         CellReportService.delete_report(
             db=db,
             deleter_id=deleter_id,
             tenant_id=tenant_id,
             report_id=report_id,
         )
+
+        # Emit business metric
+        if cell_id:
+            MetricsService.emit_cell_metric(
+                metric_name=BusinessMetric.CELL_REPORT_DELETED,
+                tenant_id=tenant_id,
+                actor_id=deleter_id,
+                cell_id=cell_id,
+            )
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

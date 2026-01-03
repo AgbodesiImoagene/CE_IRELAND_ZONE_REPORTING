@@ -101,3 +101,4 @@ def validate_cell_leader_access(
         db, user_id, tenant_id, cell.org_unit_id, permission
     )
 
+

@@ -1194,6 +1194,64 @@ class OrgAssignmentService:
 
         db.commit()
 
+    @staticmethod
+    def create_bulk_assignments(
+        db: Session,
+        creator_id: UUID,
+        tenant_id: UUID,
+        assignments: list[dict],
+        ip: Optional[str] = None,
+        user_agent: Optional[str] = None,
+    ) -> tuple[list[OrgAssignment], list[dict]]:
+        """
+        Create multiple org assignments in bulk.
+
+        Args:
+            db: Database session
+            creator_id: ID of the user creating assignments
+            tenant_id: Tenant ID
+            assignments: List of assignment dicts with keys:
+                - user_id: UUID
+                - org_unit_id: UUID
+                - role_id: UUID
+                - scope_type: str
+                - custom_org_unit_ids: Optional[list[UUID]]
+            ip: IP address
+            user_agent: User agent string
+
+        Returns:
+            Tuple of (created assignments, failed assignments with errors)
+        """
+        require_iam_permission(
+            db, creator_id, tenant_id, "system.users.assign"
+        )
+
+        created = []
+        failed = []
+
+        for assignment_data in assignments:
+            try:
+                assignment = OrgAssignmentService.create_assignment(
+                    db=db,
+                    creator_id=creator_id,
+                    tenant_id=tenant_id,
+                    user_id=assignment_data["user_id"],
+                    org_unit_id=assignment_data["org_unit_id"],
+                    role_id=assignment_data["role_id"],
+                    scope_type=assignment_data.get("scope_type", "self"),
+                    custom_org_unit_ids=assignment_data.get("custom_org_unit_ids"),
+                    ip=ip,
+                    user_agent=user_agent,
+                )
+                created.append(assignment)
+            except Exception as e:
+                failed.append({
+                    "assignment": assignment_data,
+                    "error": str(e),
+                })
+
+        return created, failed
+
 
 class AuditLogService:
     """Service for accessing audit logs."""

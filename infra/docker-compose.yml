@@ -15,6 +15,18 @@ services:
     ports:
       - "6379:6379"
 
+  redisinsight:
+    image: redis/redisinsight:latest
+    ports:
+      - "5540:5540"
+    environment:
+      - RI_REDIS_HOST=redis
+      - RI_REDIS_PORT=6379
+    depends_on:
+      - redis
+    volumes:
+        - redisinsight_data:/data
+
   minio:
     image: minio/minio:latest
     command: server /data --console-address ":9001"
@@ -99,6 +111,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./promtail-config.yml:/etc/promtail/config.yml
     command: -config.file=/etc/promtail/config.yml
+    ports:
+      - "9080:9080"
     depends_on:
       - loki
 
@@ -144,3 +158,4 @@ volumes:
   prometheus_data:
   grafana_data:
   loki_data:
+  redisinsight_data:

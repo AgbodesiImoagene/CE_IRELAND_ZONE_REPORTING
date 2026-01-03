@@ -147,3 +147,15 @@ class PasswordResetResponse(BaseModel):
     """Response after password reset."""
 
     message: str = "Password reset successfully"
+
+
+class UserPermissionsResponse(BaseModel):
+    """Response with user permissions and role information."""
+
+    user_id: UUID
+    email: str
+    is_active: bool
+    is_2fa_enabled: bool
+    roles: list[dict]
+    permissions: list[str]
+    org_assignments: list[dict]

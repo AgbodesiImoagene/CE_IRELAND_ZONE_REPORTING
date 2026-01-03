@@ -87,6 +87,19 @@ from app.common.models.cells import (
     CellReport,
 )
 
+# Export Import models
+from app.imports.models import (
+    ImportJob,
+    ImportError,
+)
+
+# Export Reports models
+from app.reports.models import (
+    ExportJob,
+    ReportTemplate,
+    ReportSchedule,
+)
+
 # Make everything available for backward compatibility
 __all__ = [
     # Base
@@ -146,5 +159,12 @@ __all__ = [
     # Cells models
     "Cell",
     "CellReport",
+    # Import models
+    "ImportJob",
+    "ImportError",
+    # Reports models
+    "ExportJob",
+    "ReportTemplate",
+    "ReportSchedule",
 ]
 

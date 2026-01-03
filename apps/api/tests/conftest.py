@@ -180,8 +180,11 @@ def db() -> Generator[Session, None, None]:
 
 
 @pytest.fixture
-def client(db: Session) -> Generator[TestClient, None, None]:
+def client(db: Session, tenant_id: str, monkeypatch) -> Generator[TestClient, None, None]:
     """Create a test client with dependency overrides."""
+    # Set settings.tenant_id for tests
+    from app.core.config import settings
+    monkeypatch.setattr(settings, "tenant_id", tenant_id)
 
     def get_test_db():
         yield db

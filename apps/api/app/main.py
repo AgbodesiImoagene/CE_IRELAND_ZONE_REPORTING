@@ -30,6 +30,8 @@ from app.users.routes import router as users_router
 from app.registry.routes import router as registry_router
 from app.finance.routes import router as finance_router
 from app.cells.routes import router as cells_router
+from app.imports.routes import router as imports_router
+from app.reports.routes import router as reports_router
 
 # API prefix constant
 API_PREFIX = "/api/v1"
@@ -138,6 +140,8 @@ app.include_router(users_router, prefix=API_PREFIX)
 app.include_router(registry_router, prefix=API_PREFIX)
 app.include_router(finance_router, prefix=API_PREFIX)
 app.include_router(cells_router, prefix=API_PREFIX)
+app.include_router(imports_router, prefix=API_PREFIX)
+app.include_router(reports_router, prefix=API_PREFIX)
 
 
 @app.get("/health")
